@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openmon"
+version = "0.1.0"
+description = "Open-Mon: A Game Boy–style RPG starring open-source mascots."
+authors = [
+  { name = "Open-Mon Team", email = "opensource@example.com" }
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "pygame>=2.0.0",
+  "pillow>=10.0.0"
+]
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
