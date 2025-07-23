@@ -23,8 +23,7 @@ class TitleScene(Scene):
         text = font.render("Open-Mon", True, (0, 0, 0))
         surface.blit(text, (40, 60))
 
-class OverworldScene(Scene):
-    pass
+from .overworld_scene import OverworldScene
 
 class BattleScene(Scene):
     pass
