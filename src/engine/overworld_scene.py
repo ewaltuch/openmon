@@ -1,3 +1,4 @@
+from .save import SaveManager
 """
 OverworldScene implementation for Open-Mon.
 """
@@ -41,7 +42,20 @@ class OverworldScene:
         return pygame.image.fromstring(img.tobytes(), img.size, img.mode)
 
     def handle_event(self, event):
-        pass
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
+            # Example: Save game state
+            SaveManager.save({
+                "player": {"x": self.player.x, "y": self.player.y},
+                "party": ["Tux"],
+                "inventory": [],
+            })
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_l:
+            # Example: Load game state
+            data = SaveManager.load()
+            if data:
+                self.player.x = data["player"]["x"]
+                self.player.y = data["player"]["y"]
+                self.player.rect.topleft = (self.player.x, self.player.y)
 
     def update(self, dt):
         keys = pygame.key.get_pressed()
