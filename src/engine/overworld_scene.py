@@ -8,7 +8,7 @@ from src.constants import GB_PALETTE, SPRITE_DIR
 import os
 from PIL import Image, ImageDraw
 
-from .scenes import BattleScene
+
 import random
 
 class OverworldScene:
@@ -65,6 +65,7 @@ class OverworldScene:
         if (self.player.x, self.player.y) != prev_pos:
             self.steps += 1
             if self.steps >= self.encounter_steps:
+                from .battle_scene import BattleScene
                 self.manager.push(BattleScene(self.manager))
                 self.steps = 0
                 self.encounter_steps = random.randint(10, 20)
