@@ -7,6 +7,9 @@ from src.constants import GB_PALETTE, SPRITE_DIR
 import os
 from PIL import Image, ImageDraw
 
+from .scenes import BattleScene
+import random
+
 class OverworldScene:
     def __init__(self, manager):
         self.manager = manager
@@ -15,6 +18,8 @@ class OverworldScene:
         self.player = Player(2 * TILE_SIZE, 2 * TILE_SIZE, [self._generate_player_sprite()])
         self.camera_x = 0
         self.camera_y = 0
+        self.steps = 0
+        self.encounter_steps = random.randint(10, 20)
 
     def _generate_tiles(self):
         # Generate 2 placeholder tiles (floor, wall) in 4-shade palette
@@ -40,7 +45,15 @@ class OverworldScene:
 
     def update(self, dt):
         keys = pygame.key.get_pressed()
+        prev_pos = (self.player.x, self.player.y)
         self.player.update(dt, keys, self.tilemap)
+        # Count steps
+        if (self.player.x, self.player.y) != prev_pos:
+            self.steps += 1
+            if self.steps >= self.encounter_steps:
+                self.manager.push(BattleScene(self.manager))
+                self.steps = 0
+                self.encounter_steps = random.randint(10, 20)
         # Camera follows player
         self.camera_x = max(0, min(self.player.x - SCREEN_WIDTH // 2, MAP_WIDTH * TILE_SIZE - SCREEN_WIDTH))
         self.camera_y = max(0, min(self.player.y - SCREEN_HEIGHT // 2, MAP_HEIGHT * TILE_SIZE - SCREEN_HEIGHT))

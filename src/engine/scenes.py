@@ -25,8 +25,7 @@ class TitleScene(Scene):
 
 from .overworld_scene import OverworldScene
 
-class BattleScene(Scene):
-    pass
+from .battle_scene import BattleScene
 
 class CreditsScene(Scene):
     pass
