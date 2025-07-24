@@ -1,10 +1,12 @@
 """
 BattleScene implementation for Open-Mon: simple turn-based battle, UI, capture.
 """
+
 import pygame
 import random
 from src.constants import GB_PALETTE
 from PIL import Image, ImageDraw
+import os
 
 class Mascot:
     def __init__(self, name, hp, atk, defense, spd, sprite, moves):
@@ -117,14 +119,32 @@ class BattleScene:
         pygame.draw.rect(surface, GB_PALETTE[1], (16, 56, int(40 * self.player.hp / self.player.max_hp), 4))
         pygame.draw.rect(surface, GB_PALETTE[3], (112, 8, 40, 4))
         pygame.draw.rect(surface, GB_PALETTE[2], (112, 8, int(40 * self.opponent.hp / self.opponent.max_hp), 4))
+
+        # Use a pixel font for crisp text if available, else fallback
+        font_path = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf")
+        # Use a larger font for battle UI text
+        menu_font_size = 12
+        msg_font_size = 12
+        if os.path.exists(font_path):
+            menu_font = pygame.font.Font(font_path, menu_font_size)
+            msg_font = pygame.font.Font(font_path, msg_font_size)
+        else:
+            menu_font = pygame.font.SysFont("Arial", menu_font_size, bold=True)
+            msg_font = pygame.font.SysFont("Arial", msg_font_size, bold=True)
+
+        # Draw a UI window background for menu and message
+        window_y = 100
+        window_height = 44
+        pygame.draw.rect(surface, GB_PALETTE[1], (0, window_y, 160, window_height))
+        pygame.draw.rect(surface, GB_PALETTE[3], (0, window_y, 160, window_height), 1)
+
         # Menu
-        font = pygame.font.SysFont("Arial", 8)
         for i, name in enumerate(self.MENU_NAMES):
             color = GB_PALETTE[3] if i == self.menu_idx else GB_PALETTE[2]
-            text = font.render(name, True, color)
-            surface.blit(text, (8, 120 + i * 10))
+            text = menu_font.render(name, True, color)
+            surface.blit(text, (8, window_y + 4 + i * 14))
         # Message
         msg_lines = self.msg.split("\n")
         for i, line in enumerate(msg_lines):
-            text = font.render(line, True, GB_PALETTE[3])
-            surface.blit(text, (64, 120 + i * 10))
+            text = msg_font.render(line, True, GB_PALETTE[3])
+            surface.blit(text, (64, window_y + 4 + i * 14))
