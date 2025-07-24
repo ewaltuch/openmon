@@ -4,7 +4,7 @@ OverworldScene implementation for Open-Mon.
 """
 import pygame
 from src.overworld import TileMap, Player, TILE_SIZE, MAP_WIDTH, MAP_HEIGHT
-from src.constants import GB_PALETTE, SPRITE_DIR
+from src.constants import GB_PALETTE, SPRITE_DIR, SCREEN_WIDTH, SCREEN_HEIGHT
 import os
 from PIL import Image, ImageDraw
 

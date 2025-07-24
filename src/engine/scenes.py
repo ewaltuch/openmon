@@ -19,6 +19,11 @@ class Scene:
 from src.constants import GB_PALETTE
 
 class TitleScene(Scene):
+    def handle_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            from .overworld_scene import OverworldScene
+            self.manager.push(OverworldScene(self.manager))
+
     def draw(self, surface):
         surface.fill(GB_PALETTE[0])
         font = pygame.font.SysFont("Arial", 16)
