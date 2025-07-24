@@ -16,12 +16,16 @@ class Scene:
     def draw(self, surface):
         pass
 
+from src.constants import GB_PALETTE
+
 class TitleScene(Scene):
     def draw(self, surface):
-        surface.fill((255, 255, 255))
+        surface.fill(GB_PALETTE[0])
         font = pygame.font.SysFont("Arial", 16)
-        text = font.render("Open-Mon", True, (0, 0, 0))
-        surface.blit(text, (40, 60))
+        text = font.render("Open-Mon", True, GB_PALETTE[3])
+        surface.blit(text, (32, 60))
+        subtitle = font.render("Press any key...", True, GB_PALETTE[2])
+        surface.blit(subtitle, (16, 90))
 
 from .overworld_scene import OverworldScene
 

@@ -32,3 +32,7 @@ class Game:
             self.manager.draw(self.screen)
             pygame.display.flip()
         pygame.quit()
+
+
+if __name__ == "__main__":
+    Game().run()
