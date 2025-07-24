@@ -59,7 +59,11 @@ class BattleScene:
         return pygame.image.fromstring(img.tobytes(), img.size, img.mode)
 
     def handle_event(self, event):
-        if self.state != "menu" or self.battle_over:
+        if self.battle_over:
+            if event.type == pygame.KEYDOWN:
+                self.manager.pop()
+            return
+        if self.state != "menu":
             return
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP:
