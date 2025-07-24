@@ -66,7 +66,7 @@ class BattleScene:
                 self.menu_idx = (self.menu_idx - 1) % 3
             elif event.key == pygame.K_DOWN:
                 self.menu_idx = (self.menu_idx + 1) % 3
-            elif event.key == pygame.K_z:
+            elif event.key in (pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER):
                 if self.menu_idx == self.MENU_FIGHT:
                     self._player_attack()
                 elif self.menu_idx == self.MENU_PACKAGE:
