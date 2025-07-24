@@ -12,11 +12,16 @@ A Game Boy–style RPG starring open-source mascots. Inspired by Pokémon Red/Bl
 ![Overworld](docs/screenshots/overworld.png)
 ![Battle](docs/screenshots/battle.png)
 
+
 ## Quickstart
 ```sh
 pip install -r requirements.txt
 python -m src.engine.game
 ```
+
+## Saving and Loading
+- While in the overworld, press **S** to save your game.
+- Press **L** to load your last save.
 
 ## License
 - Code: MIT
