@@ -41,7 +41,7 @@ class Player:
             self.rect.topleft = (self.x, self.y)
 
     def collides(self, x, y, tilemap):
-        tx, ty = x // TILE_SIZE, y // TILE_SIZE
+        tx, ty = int(x // TILE_SIZE), int(y // TILE_SIZE)
         if 0 <= tx < tilemap.width and 0 <= ty < tilemap.height:
             return tilemap.tiles[ty][tx] == 1  # 1 = wall
         return True
