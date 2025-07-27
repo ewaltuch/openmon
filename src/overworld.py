@@ -6,8 +6,8 @@ import csv
 from src.constants import SCREEN_WIDTH, SCREEN_HEIGHT, GB_PALETTE, SPRITE_DIR
 
 TILE_SIZE = 8
-MAP_WIDTH = 20
-MAP_HEIGHT = 18
+MAP_WIDTH = SCREEN_WIDTH // TILE_SIZE
+MAP_HEIGHT = SCREEN_HEIGHT // TILE_SIZE
 
 class TileMap:
     def __init__(self, csv_path):
