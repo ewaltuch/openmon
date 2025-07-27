@@ -22,6 +22,8 @@ class OverworldScene:
         self.camera_y = 0
         self.steps = 0
         self.encounter_steps = random.randint(10, 20)
+        self._pending_captured = None
+        self._last_battle_captured_name = None
 
     def _generate_tiles(self):
         # Generate 2 placeholder tiles (floor, wall) in 4-shade palette
@@ -60,6 +62,15 @@ class OverworldScene:
                 self.party = data.get("party", ["Tux"])
 
     def update(self, dt):
+        # Check if a mascot was captured in the last battle and add to party
+        captured_name = getattr(self.manager, "captured_mascot_name", None)
+        if captured_name:
+            if captured_name not in self.party:
+                self.party.append(captured_name)
+                print(f"[DEBUG] Added {captured_name} to party: {self.party}")
+            # Clear the flag so we don't add it again
+            delattr(self.manager, "captured_mascot_name")
+
         keys = pygame.key.get_pressed()
         prev_pos = (self.player.x, self.player.y)
         self.player.update(dt, keys, self.tilemap)
@@ -67,8 +78,11 @@ class OverworldScene:
         if (self.player.x, self.player.y) != prev_pos:
             self.steps += 1
             if self.steps >= self.encounter_steps:
+                print(f"[DEBUG] Starting battle with party: {self.party}")
                 from .battle_scene import BattleScene
-                self.manager.push(BattleScene(self.manager, party=[self._make_party_mascot(name) for name in self.party]))
+                mascots = [self._make_party_mascot(name) for name in self.party]
+                print(f"[DEBUG] Mascots in battle: {[m.name for m in mascots]}")
+                self.manager.push(BattleScene(self.manager, party=mascots))
                 self.steps = 0
                 self.encounter_steps = random.randint(10, 20)
 

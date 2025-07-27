@@ -10,7 +10,7 @@
 - [x] Docs & backlog
 
 ## Milestone 1: Core Gameplay
-- [ ] Multiple mascots, party system
+- [X] Multiple mascots, party system
 - [ ] More moves, elemental types (Kernel, Shell, Browser, Editor…)
 - [ ] NPCs, dialogue in YAML
 - [ ] Inventory, items, packages

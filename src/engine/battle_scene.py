@@ -141,8 +141,13 @@ class BattleScene:
         # Simple probability: higher if opponent HP is low
         prob = max(0.2, 1.0 - self.opponent.hp / self.opponent.max_hp)
         if random.random() < prob:
-            self.msg = "You captured Octocat!"
+            self.msg = f"You captured {self.opponent.name}!"
             self.captured = True
+            # Add to party for this battle
+            if not any(m.name == self.opponent.name for m in self.party):
+                self.party.append(self.opponent)
+            # Persist captured mascot name on the manager for the overworld
+            setattr(self.manager, "captured_mascot_name", self.opponent.name)
             self.battle_over = True
         else:
             self.msg = "Capture failed!"
