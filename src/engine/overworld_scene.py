@@ -73,14 +73,8 @@ class OverworldScene:
                 self.encounter_steps = random.randint(10, 20)
 
     def _make_party_mascot(self, name):
-        # For demo, just Tux and BSD Daemon
         from .battle_scene import BattleScene
-        if name == "Tux":
-            return BattleScene(self.manager)._make_tux()
-        elif name == "BSD Daemon":
-            return BattleScene(self.manager)._make_bsd()
-        else:
-            return BattleScene(self.manager)._make_tux()
+        return BattleScene(self.manager).make_mascot(name)
         # Camera follows player
         self.camera_x = max(0, min(self.player.x - SCREEN_WIDTH // 2, MAP_WIDTH * TILE_SIZE - SCREEN_WIDTH))
         self.camera_y = max(0, min(self.player.y - SCREEN_HEIGHT // 2, MAP_HEIGHT * TILE_SIZE - SCREEN_HEIGHT))

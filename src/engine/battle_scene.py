@@ -24,20 +24,19 @@ class Move:
         self.name = name
         self.power = power
 
-class BattleScene:
 
+class BattleScene:
     MENU_FIGHT = 0
     MENU_PACKAGE = 1
     MENU_FLEE = 2
     MENU_SWITCH = 3
 
-
     def __init__(self, manager, party=None):
         self.manager = manager
-        self.party = party or [self._make_tux(), self._make_bsd()]
+        self.party = party or [self.make_mascot("Tux"), self.make_mascot("BSD Daemon")]
         self.active_idx = 0
         self.player = self.party[self.active_idx]
-        self.opponent = self._make_octocat()
+        self.opponent = self.make_mascot("Octocat")
         self.menu_idx = 0
         self.state = "menu"  # menu, anim, result
         self.msg = "A wild Octocat appeared!"
@@ -51,23 +50,26 @@ class BattleScene:
             names.append("Switch")
         return names
 
-    def _make_tux(self):
+    def make_mascot(self, name):
+        if name == "Tux":
+            return Mascot(
+                "Tux", 24, 8, 6, 7, self._generate_tux_sprite(), [Move("Peck", 6), Move("Code", 8)]
+            )
+        elif name == "BSD Daemon":
+            img = Image.new("RGB", (32, 32), GB_PALETTE[0])
+            draw = ImageDraw.Draw(img)
+            draw.ellipse([8, 8, 24, 24], fill=GB_PALETTE[2])
+            draw.rectangle([12, 24, 20, 28], fill=GB_PALETTE[1])
+            return Mascot(
+                "BSD Daemon", 22, 7, 7, 5, pygame.image.fromstring(img.tobytes(), img.size, img.mode), [Move("Fork Bomb", 7), Move("Daemonize", 5)]
+            )
+        elif name == "Octocat":
+            return Mascot(
+                "Octocat", 20, 7, 5, 6, self._generate_octocat_sprite(), [Move("Fork", 7), Move("PR", 5)]
+            )
+        # Default fallback
         return Mascot(
-            "Tux", 24, 8, 6, 7, self._generate_tux_sprite(), [Move("Peck", 6), Move("Code", 8)]
-        )
-
-    def _make_bsd(self):
-        img = Image.new("RGB", (32, 32), GB_PALETTE[0])
-        draw = ImageDraw.Draw(img)
-        draw.ellipse([8, 8, 24, 24], fill=GB_PALETTE[2])
-        draw.rectangle([12, 24, 20, 28], fill=GB_PALETTE[1])
-        return Mascot(
-            "BSD Daemon", 22, 7, 7, 5, pygame.image.fromstring(img.tobytes(), img.size, img.mode), [Move("Fork Bomb", 7), Move("Daemonize", 5)]
-        )
-
-    def _make_octocat(self):
-        return Mascot(
-            "Octocat", 20, 7, 5, 6, self._generate_octocat_sprite(), [Move("Fork", 7), Move("PR", 5)]
+            name, 20, 5, 5, 5, self._generate_tux_sprite(), [Move("Peck", 5)]
         )
 
     def _generate_tux_sprite(self):
