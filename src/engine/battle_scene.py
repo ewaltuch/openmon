@@ -4,7 +4,7 @@ BattleScene implementation for Open-Mon: simple turn-based battle, UI, capture.
 
 import pygame
 import random
-from src.constants import GB_PALETTE
+from src.constants import GB_PALETTE, SCREEN_WIDTH, SCREEN_HEIGHT
 from PIL import Image, ImageDraw
 import os
 
@@ -25,24 +25,50 @@ class Move:
         self.power = power
 
 class BattleScene:
+
     MENU_FIGHT = 0
     MENU_PACKAGE = 1
     MENU_FLEE = 2
-    MENU_NAMES = ["Fight", "Package", "Flee"]
+    MENU_SWITCH = 3
 
-    def __init__(self, manager):
+
+    def __init__(self, manager, party=None):
         self.manager = manager
-        self.player = Mascot(
-            "Tux", 24, 8, 6, 7, self._generate_tux_sprite(), [Move("Peck", 6), Move("Code", 8)]
-        )
-        self.opponent = Mascot(
-            "Octocat", 20, 7, 5, 6, self._generate_octocat_sprite(), [Move("Fork", 7), Move("PR", 5)]
-        )
+        self.party = party or [self._make_tux(), self._make_bsd()]
+        self.active_idx = 0
+        self.player = self.party[self.active_idx]
+        self.opponent = self._make_octocat()
         self.menu_idx = 0
         self.state = "menu"  # menu, anim, result
         self.msg = "A wild Octocat appeared!"
         self.captured = False
         self.battle_over = False
+
+    @property
+    def menu_names(self):
+        names = ["Fight", "Package", "Flee"]
+        if len(self.party) > 1:
+            names.append("Switch")
+        return names
+
+    def _make_tux(self):
+        return Mascot(
+            "Tux", 24, 8, 6, 7, self._generate_tux_sprite(), [Move("Peck", 6), Move("Code", 8)]
+        )
+
+    def _make_bsd(self):
+        img = Image.new("RGB", (32, 32), GB_PALETTE[0])
+        draw = ImageDraw.Draw(img)
+        draw.ellipse([8, 8, 24, 24], fill=GB_PALETTE[2])
+        draw.rectangle([12, 24, 20, 28], fill=GB_PALETTE[1])
+        return Mascot(
+            "BSD Daemon", 22, 7, 7, 5, pygame.image.fromstring(img.tobytes(), img.size, img.mode), [Move("Fork Bomb", 7), Move("Daemonize", 5)]
+        )
+
+    def _make_octocat(self):
+        return Mascot(
+            "Octocat", 20, 7, 5, 6, self._generate_octocat_sprite(), [Move("Fork", 7), Move("PR", 5)]
+        )
 
     def _generate_tux_sprite(self):
         img = Image.new("RGB", (32, 32), GB_PALETTE[0])
@@ -66,10 +92,11 @@ class BattleScene:
         if self.state != "menu":
             return
         if event.type == pygame.KEYDOWN:
+            menu_len = len(self.menu_names)
             if event.key == pygame.K_UP:
-                self.menu_idx = (self.menu_idx - 1) % 3
+                self.menu_idx = (self.menu_idx - 1) % menu_len
             elif event.key == pygame.K_DOWN:
-                self.menu_idx = (self.menu_idx + 1) % 3
+                self.menu_idx = (self.menu_idx + 1) % menu_len
             elif event.key in (pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER):
                 if self.menu_idx == self.MENU_FIGHT:
                     self._player_attack()
@@ -78,12 +105,21 @@ class BattleScene:
                 elif self.menu_idx == self.MENU_FLEE:
                     self.msg = "You fled!"
                     self.battle_over = True
+                elif len(self.party) > 1 and self.menu_idx == self.menu_names.index("Switch"):
+                    self._switch_party()
+
+    def _switch_party(self):
+        # Switch to next mascot in party
+        if len(self.party) > 1:
+            self.active_idx = (self.active_idx + 1) % len(self.party)
+            self.player = self.party[self.active_idx]
+            self.msg = f"Go, {self.player.name}!"
 
     def _player_attack(self):
         move = self.player.moves[0]
         dmg = max(1, move.power + self.player.atk - self.opponent.defense)
         self.opponent.hp -= dmg
-        self.msg = f"Tux used {move.name}! ({dmg} dmg)"
+        self.msg = f"{self.player.name} used {move.name}! ({dmg} dmg)"
         if self.opponent.hp <= 0:
             self.msg = "Octocat fainted!"
             self.battle_over = True
@@ -137,18 +173,35 @@ class BattleScene:
             msg_font = pygame.font.SysFont("Arial", msg_font_size, bold=True)
 
         # Draw a UI window background for menu and message
-        window_y = 100
-        window_height = 44
-        pygame.draw.rect(surface, GB_PALETTE[1], (0, window_y, 160, window_height))
-        pygame.draw.rect(surface, GB_PALETTE[3], (0, window_y, 160, window_height), 1)
+        window_y = SCREEN_HEIGHT - 56
+        menu_names = self.menu_names
+        # Separate Switch if present
+        if "Switch" in menu_names:
+            vert_names = menu_names[:-1]
+            switch_name = menu_names[-1]
+        else:
+            vert_names = menu_names
+            switch_name = None
+        menu_lines = len(vert_names)
+        msg_lines = len(self.msg.split("\n"))
+        window_height = 4 + max(menu_lines, msg_lines) * 14 + 4 + (18 if switch_name else 0)
+        pygame.draw.rect(surface, GB_PALETTE[1], (0, window_y, SCREEN_WIDTH, window_height))
+        pygame.draw.rect(surface, GB_PALETTE[3], (0, window_y, SCREEN_WIDTH, window_height), 1)
 
-        # Menu
-        for i, name in enumerate(self.MENU_NAMES):
-            color = GB_PALETTE[3] if i == self.menu_idx else GB_PALETTE[2]
+        # Vertical menu
+        for i, name in enumerate(vert_names):
+            color = GB_PALETTE[3] if self.menu_idx == i else GB_PALETTE[2]
             text = menu_font.render(name, True, color)
             surface.blit(text, (8, window_y + 4 + i * 14))
+
+        # Switch option directly under the vertical menu options, left-aligned
+        if switch_name:
+            idx = len(vert_names)
+            color = GB_PALETTE[3] if self.menu_idx == idx else GB_PALETTE[2]
+            text = menu_font.render(switch_name, True, color)
+            surface.blit(text, (8, window_y + 4 + menu_lines * 14))
         # Message
         msg_lines = self.msg.split("\n")
         for i, line in enumerate(msg_lines):
             text = msg_font.render(line, True, GB_PALETTE[3])
-            surface.blit(text, (64, window_y + 4 + i * 14))
+            surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, window_y + 4 + i * 14))

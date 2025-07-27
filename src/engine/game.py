@@ -5,9 +5,9 @@ import pygame
 from .scene_manager import SceneManager
 from .scenes import TitleScene
 
+
+from src.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 FPS = 60
-SCREEN_WIDTH = 160
-SCREEN_HEIGHT = 144
 
 class Game:
     """Main game engine class."""

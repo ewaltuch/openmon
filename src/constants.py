@@ -2,9 +2,9 @@
 Constants for Open-Mon. All global settings and palette definitions.
 """
 
-# Game Boy native resolution
-SCREEN_WIDTH = 160
-SCREEN_HEIGHT = 144
+ # Game Boy Advance native resolution
+SCREEN_WIDTH = 240
+SCREEN_HEIGHT = 160
 FPS = 60
 
 # Game Boy 4-shade palette (lightest to darkest)

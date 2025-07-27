@@ -16,6 +16,7 @@ class OverworldScene:
         self.manager = manager
         self.tile_images = self._generate_tiles()
         self.tilemap = TileMap(os.path.join(SPRITE_DIR, "tiles.csv"))
+        self.party = ["Tux", "BSD Daemon"]
         self.player = Player(2 * TILE_SIZE, 2 * TILE_SIZE, [self._generate_player_sprite()])
         self.camera_x = 0
         self.camera_y = 0
@@ -43,19 +44,20 @@ class OverworldScene:
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
-            # Example: Save game state
+            # Save game state with party
             SaveManager.save({
                 "player": {"x": self.player.x, "y": self.player.y},
-                "party": ["Tux"],
+                "party": self.party,
                 "inventory": [],
             })
         if event.type == pygame.KEYDOWN and event.key == pygame.K_l:
-            # Example: Load game state
+            # Load game state with party
             data = SaveManager.load()
             if data:
                 self.player.x = data["player"]["x"]
                 self.player.y = data["player"]["y"]
                 self.player.rect.topleft = (self.player.x, self.player.y)
+                self.party = data.get("party", ["Tux"])
 
     def update(self, dt):
         keys = pygame.key.get_pressed()
@@ -66,9 +68,19 @@ class OverworldScene:
             self.steps += 1
             if self.steps >= self.encounter_steps:
                 from .battle_scene import BattleScene
-                self.manager.push(BattleScene(self.manager))
+                self.manager.push(BattleScene(self.manager, party=[self._make_party_mascot(name) for name in self.party]))
                 self.steps = 0
                 self.encounter_steps = random.randint(10, 20)
+
+    def _make_party_mascot(self, name):
+        # For demo, just Tux and BSD Daemon
+        from .battle_scene import BattleScene
+        if name == "Tux":
+            return BattleScene(self.manager)._make_tux()
+        elif name == "BSD Daemon":
+            return BattleScene(self.manager)._make_bsd()
+        else:
+            return BattleScene(self.manager)._make_tux()
         # Camera follows player
         self.camera_x = max(0, min(self.player.x - SCREEN_WIDTH // 2, MAP_WIDTH * TILE_SIZE - SCREEN_WIDTH))
         self.camera_y = max(0, min(self.player.y - SCREEN_HEIGHT // 2, MAP_HEIGHT * TILE_SIZE - SCREEN_HEIGHT))
