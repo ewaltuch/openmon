@@ -24,6 +24,10 @@ class OverworldScene:
         self.encounter_steps = random.randint(10, 20)
         self._pending_captured = None
         self._last_battle_captured_name = None
+        # Load NPCs
+        from src.engine.npc import load_npcs
+        self.npcs = load_npcs(os.path.join(os.path.dirname(__file__), "..", "..", "assets", "npcs.yaml"))
+        self.active_dialogue = None
 
     def _generate_tiles(self):
         # Generate 2 placeholder tiles (floor, wall) in 4-shade palette
@@ -60,6 +64,12 @@ class OverworldScene:
                 self.player.y = data["player"]["y"]
                 self.player.rect.topleft = (self.player.x, self.player.y)
                 self.party = data.get("party", ["Tux"])
+        # Interact with NPCs (spacebar)
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            for npc in self.npcs:
+                if abs(self.player.x // TILE_SIZE - npc.x) <= 1 and abs(self.player.y // TILE_SIZE - npc.y) <= 1:
+                    self.active_dialogue = npc.talk()
+                    break
 
     def update(self, dt):
         # Check if a mascot was captured in the last battle and add to party
@@ -93,3 +103,16 @@ class OverworldScene:
     def draw(self, surface):
         self.tilemap.draw(surface, self.camera_x, self.camera_y, self.tile_images)
         self.player.draw(surface, self.camera_x, self.camera_y)
+        # Draw NPCs (simple circle for now)
+        for npc in self.npcs:
+            px = npc.x * TILE_SIZE - self.camera_x
+            py = npc.y * TILE_SIZE - self.camera_y
+            pygame.draw.circle(surface, GB_PALETTE[2], (px + TILE_SIZE // 2, py + TILE_SIZE // 2), TILE_SIZE // 2)
+        # Draw dialogue box if active
+        if self.active_dialogue:
+            font = pygame.font.SysFont("Arial", 12, bold=True)
+            box_w, box_h = 200, 32
+            pygame.draw.rect(surface, GB_PALETTE[1], (20, SCREEN_HEIGHT - box_h - 10, box_w, box_h))
+            pygame.draw.rect(surface, GB_PALETTE[3], (20, SCREEN_HEIGHT - box_h - 10, box_w, box_h), 1)
+            text = font.render(self.active_dialogue, True, GB_PALETTE[3])
+            surface.blit(text, (30, SCREEN_HEIGHT - box_h))

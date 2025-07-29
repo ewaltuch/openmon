@@ -1,0 +1,17 @@
+# Example NPCs and dialogue for Open-Mon
+- id: npc_1
+  name: Linus
+  x: 5
+  y: 8
+  sprite: tux
+  dialogue:
+    - "Welcome to Open-Mon!"
+    - "Did you know you can capture mascots with Packages?"
+- id: npc_2
+  name: Ada
+  x: 12
+  y: 15
+  sprite: bsd
+  dialogue:
+    - "I'm Ada, the code wizard."
+    - "Try using Editor-type moves for a surprise!"
