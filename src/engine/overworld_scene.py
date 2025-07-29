@@ -67,7 +67,6 @@ class OverworldScene:
         if captured_name:
             if captured_name not in self.party:
                 self.party.append(captured_name)
-                print(f"[DEBUG] Added {captured_name} to party: {self.party}")
             # Clear the flag so we don't add it again
             delattr(self.manager, "captured_mascot_name")
 
@@ -78,10 +77,8 @@ class OverworldScene:
         if (self.player.x, self.player.y) != prev_pos:
             self.steps += 1
             if self.steps >= self.encounter_steps:
-                print(f"[DEBUG] Starting battle with party: {self.party}")
                 from .battle_scene import BattleScene
                 mascots = [self._make_party_mascot(name) for name in self.party]
-                print(f"[DEBUG] Mascots in battle: {[m.name for m in mascots]}")
                 self.manager.push(BattleScene(self.manager, party=mascots))
                 self.steps = 0
                 self.encounter_steps = random.randint(10, 20)
