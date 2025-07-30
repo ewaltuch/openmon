@@ -133,7 +133,22 @@ class OverworldScene:
         if self.active_dialogue:
             font = pygame.font.SysFont("Arial", 12, bold=True)
             box_w, box_h = 200, 32
+            # Word wrap
+            words = self.active_dialogue.split()
+            lines = []
+            current = ""
+            for word in words:
+                test = current + (" " if current else "") + word
+                if font.size(test)[0] <= box_w - 20:
+                    current = test
+                else:
+                    lines.append(current)
+                    current = word
+            if current:
+                lines.append(current)
+            box_h = 20 + 16 * len(lines)
             pygame.draw.rect(surface, GB_PALETTE[1], (20, SCREEN_HEIGHT - box_h - 10, box_w, box_h))
             pygame.draw.rect(surface, GB_PALETTE[3], (20, SCREEN_HEIGHT - box_h - 10, box_w, box_h), 1)
-            text = font.render(self.active_dialogue, True, GB_PALETTE[3])
-            surface.blit(text, (30, SCREEN_HEIGHT - box_h))
+            for i, line in enumerate(lines):
+                text = font.render(line, True, GB_PALETTE[3])
+                surface.blit(text, (30, SCREEN_HEIGHT - box_h + 8 + i * 16))

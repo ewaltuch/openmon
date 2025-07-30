@@ -12,7 +12,7 @@
 ## Milestone 1: Core Gameplay
 - [X] Multiple mascots, party system
 - [X] More moves, elemental types (Kernel, Shell, Browser, Editor…)
-- [ ] NPCs, dialogue in YAML
+- [X] NPCs, dialogue in YAML
 - [ ] Inventory, items, packages
 - [ ] More maps, Tiled .tmx support
 - [ ] Battle UI polish, animations
