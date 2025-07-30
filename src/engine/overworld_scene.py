@@ -12,6 +12,14 @@ from PIL import Image, ImageDraw
 import random
 
 class OverworldScene:
+    def npc_collides(self, x, y):
+        # Check if player's bounding box overlaps any NPC tile
+        player_rect = pygame.Rect(x, y, TILE_SIZE, TILE_SIZE)
+        for npc in self.npcs:
+            npc_rect = pygame.Rect(npc.x * TILE_SIZE, npc.y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            if player_rect.colliderect(npc_rect):
+                return True
+        return False
     def __init__(self, manager):
         self.manager = manager
         self.tile_images = self._generate_tiles()
@@ -82,7 +90,20 @@ class OverworldScene:
 
         keys = pygame.key.get_pressed()
         prev_pos = (self.player.x, self.player.y)
-        self.player.update(dt, keys, self.tilemap)
+        # Calculate intended movement
+        dx = dy = 0
+        if keys[pygame.K_LEFT]:
+            dx = -self.player.speed * dt
+        elif keys[pygame.K_RIGHT]:
+            dx = self.player.speed * dt
+        if keys[pygame.K_UP]:
+            dy = -self.player.speed * dt
+        elif keys[pygame.K_DOWN]:
+            dy = self.player.speed * dt
+        target_x = self.player.x + dx
+        target_y = self.player.y + dy
+        if not self.npc_collides(target_x, target_y):
+            self.player.move(dx, dy, self.tilemap)
         # Count steps
         if (self.player.x, self.player.y) != prev_pos:
             self.steps += 1
