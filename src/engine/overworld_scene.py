@@ -38,14 +38,22 @@ class OverworldScene:
         self.active_dialogue = None
 
     def _generate_tiles(self):
-        # Generate 2 placeholder tiles (floor, wall) in 4-shade palette
+        # 0 = floor, 1 = wall, 2 = tall grass
         tiles = []
-        for i in range(2):
-            img = Image.new("RGB", (TILE_SIZE, TILE_SIZE), GB_PALETTE[i])
-            if i == 1:
-                draw = ImageDraw.Draw(img)
-                draw.rectangle([2, 2, 5, 5], fill=GB_PALETTE[3])
-            tiles.append(pygame.image.fromstring(img.tobytes(), img.size, img.mode))
+        # Floor
+        img = Image.new("RGB", (TILE_SIZE, TILE_SIZE), GB_PALETTE[0])
+        tiles.append(pygame.image.fromstring(img.tobytes(), img.size, img.mode))
+        # Wall
+        img = Image.new("RGB", (TILE_SIZE, TILE_SIZE), GB_PALETTE[1])
+        draw = ImageDraw.Draw(img)
+        draw.rectangle([2, 2, 5, 5], fill=GB_PALETTE[3])
+        tiles.append(pygame.image.fromstring(img.tobytes(), img.size, img.mode))
+        # Tall grass
+        img = Image.new("RGB", (TILE_SIZE, TILE_SIZE), GB_PALETTE[2])
+        draw = ImageDraw.Draw(img)
+        for i in range(3):
+            draw.line([1, 2 + i, 6, 2 + i], fill=GB_PALETTE[3], width=1)
+        tiles.append(pygame.image.fromstring(img.tobytes(), img.size, img.mode))
         return tiles
 
     def _generate_player_sprite(self):
@@ -104,8 +112,10 @@ class OverworldScene:
         target_y = self.player.y + dy
         if not self.npc_collides(target_x, target_y):
             self.player.move(dx, dy, self.tilemap)
-        # Count steps
-        if (self.player.x, self.player.y) != prev_pos:
+        # Count steps only in tall grass
+        tx, ty = int(self.player.x // TILE_SIZE), int(self.player.y // TILE_SIZE)
+        in_grass = (0 <= tx < self.tilemap.width and 0 <= ty < self.tilemap.height and self.tilemap.tiles[ty][tx] == 2)
+        if (self.player.x, self.player.y) != prev_pos and in_grass:
             self.steps += 1
             if self.steps >= self.encounter_steps:
                 from .battle_scene import BattleScene
