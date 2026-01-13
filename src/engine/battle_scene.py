@@ -40,26 +40,28 @@ TYPE_EFFECTIVENESS = {
 
 class BattleScene:
     MENU_FIGHT = 0
-    MENU_PACKAGE = 1
+    MENU_ITEM = 1
     MENU_FLEE = 2
     MENU_SWITCH = 3
 
-    def __init__(self, manager, party=None):
+    def __init__(self, manager, party=None, inventory=None):
         self.manager = manager
         self.party = party or [self.make_mascot("Tux"), self.make_mascot("BSD Daemon")]
         self.active_idx = 0
         self.player = self.party[self.active_idx]
         self.opponent = self.make_mascot("Octocat")
         self.menu_idx = 0
-        self.state = "menu"  # menu, move_select, anim, result
+        self.state = "menu"  # menu, move_select, item_select, anim, result
         self.msg = "A wild Octocat appeared!"
         self.captured = False
         self.battle_over = False
         self.move_idx = 0
+        self.item_idx = 0
+        self.inventory = inventory
 
     @property
     def menu_names(self):
-        names = ["Fight", "Package", "Flee"]
+        names = ["Fight", "Item", "Flee"]
         if len(self.party) > 1:
             names.append("Switch")
         return names
@@ -134,8 +136,12 @@ class BattleScene:
                     if self.menu_idx == self.MENU_FIGHT:
                         self.state = "move_select"
                         self.move_idx = 0
-                    elif self.menu_idx == self.MENU_PACKAGE:
-                        self._try_capture()
+                    elif self.menu_idx == self.MENU_ITEM:
+                        if self.inventory and self.inventory.get_all_items():
+                            self.state = "item_select"
+                            self.item_idx = 0
+                        else:
+                            self.msg = "No items available!"
                     elif self.menu_idx == self.MENU_FLEE:
                         self.msg = "You fled!"
                         self.battle_over = True
@@ -151,6 +157,17 @@ class BattleScene:
                 elif event.key in (pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER):
                     self._player_attack(self.move_idx)
                     self.state = "menu"
+                elif event.key == pygame.K_x:
+                    self.state = "menu"
+        elif self.state == "item_select":
+            if event.type == pygame.KEYDOWN:
+                items = self.inventory.get_all_items()
+                if event.key == pygame.K_UP:
+                    self.item_idx = (self.item_idx - 1) % len(items)
+                elif event.key == pygame.K_DOWN:
+                    self.item_idx = (self.item_idx + 1) % len(items)
+                elif event.key in (pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER):
+                    self._use_item(self.item_idx)
                 elif event.key == pygame.K_x:
                     self.state = "menu"
 
@@ -185,7 +202,54 @@ class BattleScene:
             self.msg += f"\n{self.player.name} fainted!"
             self.battle_over = True
 
+    def _use_item(self, item_idx):
+        """Use an item from inventory during battle."""
+        items = self.inventory.get_all_items()
+        if item_idx >= len(items):
+            return
+
+        item, quantity = items[item_idx]
+
+        # Handle packages (capture)
+        if item.type == item.TYPE_PACKAGE:
+            if not self.inventory.has_item("package"):
+                self.msg = "No packages available!"
+                self.state = "menu"
+                return
+            self._try_capture()
+            return
+
+        # Handle consumable items (healing, etc.)
+        if item.type == item.TYPE_CONSUMABLE:
+            used = self.inventory.use_item(item.id, self.player)
+            if used:
+                if "heal" in item.effect:
+                    self.msg = f"Used {item.name} on {self.player.name}! Restored HP."
+                elif "full_heal" in item.effect:
+                    self.msg = f"Used {item.name} on {self.player.name}! Fully restored HP."
+                elif "revive" in item.effect:
+                    self.msg = f"Used {item.name} on {self.player.name}! Revived!"
+                self._opponent_attack()
+            else:
+                self.msg = f"{item.name} had no effect!"
+            self.state = "menu"
+            return
+
+        # Key items can't be used in battle
+        self.msg = "Can't use that here!"
+        self.state = "menu"
+
     def _try_capture(self):
+        """Attempt to capture wild mascot using a package."""
+        # Check if player has packages
+        if not self.inventory or not self.inventory.has_item("package"):
+            self.msg = "No packages available!"
+            self.state = "menu"
+            return
+
+        # Consume a package
+        self.inventory.remove_item("package")
+
         # Simple probability: higher if opponent HP is low
         prob = max(0.2, 1.0 - self.opponent.hp / self.opponent.max_hp)
         if random.random() < prob:
@@ -200,6 +264,7 @@ class BattleScene:
         else:
             self.msg = "Capture failed!"
             self._opponent_attack()
+        self.state = "menu"
 
     def update(self, dt):
         pass
@@ -264,6 +329,21 @@ class BattleScene:
                 surface.blit(text, (8, window_y + 4 + i * 14))
             text = msg_font.render("Choose a move (Z/Enter to confirm, X to cancel)", True, GB_PALETTE[3])
             surface.blit(text, (8, window_y + 4 + len(moves) * 14))
+        elif self.state == "item_select":
+            items = self.inventory.get_all_items() if self.inventory else []
+            window_height = 4 + max(1, len(items)) * 14 + 18
+            pygame.draw.rect(surface, GB_PALETTE[1], (0, window_y, SCREEN_WIDTH, window_height))
+            pygame.draw.rect(surface, GB_PALETTE[3], (0, window_y, SCREEN_WIDTH, window_height), 1)
+            if items:
+                for i, (item, quantity) in enumerate(items):
+                    color = GB_PALETTE[3] if self.item_idx == i else GB_PALETTE[2]
+                    text = menu_font.render(f"{item.name} x{quantity}", True, color)
+                    surface.blit(text, (8, window_y + 4 + i * 14))
+            else:
+                text = menu_font.render("No items!", True, GB_PALETTE[3])
+                surface.blit(text, (8, window_y + 4))
+            text = msg_font.render("Choose an item (Z/Enter to use, X to cancel)", True, GB_PALETTE[3])
+            surface.blit(text, (8, window_y + 4 + max(1, len(items)) * 14))
         else:
             msg_lines = self.msg.split("\n")
             window_height = 4 + len(msg_lines) * 14 + 4

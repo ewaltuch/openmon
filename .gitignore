@@ -46,8 +46,10 @@ coverage.xml
 # pyenv
 .python-version
 
-# VS Code
+# VS Code / Claude Code / dotenv etc
 .vscode/
+CLAUDE.md
+.env
 
 # macOS
 .DS_Store

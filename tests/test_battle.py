@@ -1,5 +1,7 @@
 import pytest
+from unittest.mock import patch
 from src.engine.battle_scene import BattleScene, Mascot, Move, TYPE_EFFECTIVENESS
+from src.engine.inventory import InventoryManager
 
 class DummyManager:
     def __init__(self):
@@ -40,13 +42,17 @@ def test_player_attack_damage():
 
 # Test capturing mascot adds to party
 def test_capture_adds_to_party():
-    scene = BattleScene(DummyManager())
+    inventory = InventoryManager()
+    inventory.add_item("package", 1)
+    scene = BattleScene(DummyManager(), inventory=inventory)
     tux = scene.make_mascot("Tux")
     octocat = scene.make_mascot("Octocat")
     scene.player = tux
     scene.opponent = octocat
     scene.party = [tux]
     octocat.hp = 1  # Make capture likely
-    scene._try_capture()
+    # Mock random to ensure capture succeeds
+    with patch('src.engine.battle_scene.random.random', return_value=0.1):
+        scene._try_capture()
     assert any(m.name == "Octocat" for m in scene.party)
     assert scene.captured is True

@@ -17,6 +17,10 @@ dependencies = [
   "pillow>=10.0.0"
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
 [tool.black]
 line-length = 88
 

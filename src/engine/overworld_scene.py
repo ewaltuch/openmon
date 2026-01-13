@@ -20,7 +20,7 @@ class OverworldScene:
             if player_rect.colliderect(npc_rect):
                 return True
         return False
-    def __init__(self, manager):
+    def __init__(self, manager, inventory=None):
         self.manager = manager
         self.tile_images = self._generate_tiles()
         self.tilemap = TileMap(os.path.join(SPRITE_DIR, "tiles.csv"))
@@ -36,6 +36,14 @@ class OverworldScene:
         from src.engine.npc import load_npcs
         self.npcs = load_npcs(os.path.join(os.path.dirname(__file__), "..", "..", "assets", "npcs.yaml"))
         self.active_dialogue = None
+        self.active_npc = None
+        # Inventory system
+        from src.engine.inventory import InventoryManager
+        self.inventory = inventory or InventoryManager()
+        # Give player starting items
+        if not inventory:
+            self.inventory.add_item("package", 5)
+            self.inventory.add_item("health_pack", 3)
 
     def _generate_tiles(self):
         # 0 = floor, 1 = wall, 2 = tall grass
@@ -66,26 +74,40 @@ class OverworldScene:
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
-            # Save game state with party
+            # Save game state with party and inventory
             SaveManager.save({
                 "player": {"x": self.player.x, "y": self.player.y},
                 "party": self.party,
-                "inventory": [],
+                "inventory": self.inventory.to_dict(),
             })
         if event.type == pygame.KEYDOWN and event.key == pygame.K_l:
-            # Load game state with party
+            # Load game state with party and inventory
             data = SaveManager.load()
             if data:
                 self.player.x = data["player"]["x"]
                 self.player.y = data["player"]["y"]
                 self.player.rect.topleft = (self.player.x, self.player.y)
                 self.party = data.get("party", ["Tux"])
+                if "inventory" in data:
+                    self.inventory.from_dict(data["inventory"])
         # Interact with NPCs (spacebar)
         if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-            for npc in self.npcs:
-                if abs(self.player.x // TILE_SIZE - npc.x) <= 1 and abs(self.player.y // TILE_SIZE - npc.y) <= 1:
-                    self.active_dialogue = npc.talk()
-                    break
+            if self.active_dialogue and self.active_npc:
+                # Advance dialogue with the current NPC
+                next_line = self.active_npc.talk()
+                if next_line:
+                    self.active_dialogue = next_line
+                else:
+                    # No more dialogue, close the dialogue box
+                    self.active_dialogue = None
+                    self.active_npc = None
+            else:
+                # Try to interact with NPC
+                for npc in self.npcs:
+                    if abs(self.player.x // TILE_SIZE - npc.x) <= 1 and abs(self.player.y // TILE_SIZE - npc.y) <= 1:
+                        self.active_npc = npc
+                        self.active_dialogue = npc.talk()
+                        break
 
     def update(self, dt):
         # Check if a mascot was captured in the last battle and add to party
@@ -120,7 +142,7 @@ class OverworldScene:
             if self.steps >= self.encounter_steps:
                 from .battle_scene import BattleScene
                 mascots = [self._make_party_mascot(name) for name in self.party]
-                self.manager.push(BattleScene(self.manager, party=mascots))
+                self.manager.push(BattleScene(self.manager, party=mascots, inventory=self.inventory))
                 self.steps = 0
                 self.encounter_steps = random.randint(10, 20)
 
