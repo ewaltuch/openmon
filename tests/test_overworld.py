@@ -14,13 +14,15 @@ def test_party_adds_captured():
     scene = OverworldScene(mgr)
     mgr.captured_mascot_name = "Octocat"
     scene.update(0.1)
-    assert "Octocat" in scene.party
+    # Party is now a list of state dicts, check for name
+    assert any(state["name"] == "Octocat" for state in scene.party)
 
 def test_party_initial():
     mgr = DummyManager()
     scene = OverworldScene(mgr)
-    assert "Tux" in scene.party
-    assert "BSD Daemon" in scene.party
+    # Party is now a list of state dicts, check for names
+    assert any(state["name"] == "Tux" for state in scene.party)
+    assert any(state["name"] == "BSD Daemon" for state in scene.party)
 
 def test_encounter_only_in_grass():
     mgr = DummyManager()

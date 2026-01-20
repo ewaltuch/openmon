@@ -24,7 +24,8 @@ class OverworldScene:
         self.manager = manager
         self.tile_images = self._generate_tiles()
         self.tilemap = TileMap(os.path.join(SPRITE_DIR, "tiles.csv"))
-        self.party = ["Tux", "BSD Daemon"]
+        # Initialize party as state dictionaries
+        self.party = self._initialize_party(["Tux", "BSD Daemon"])
         self.player = Player(2 * TILE_SIZE, 2 * TILE_SIZE, [self._generate_player_sprite()])
         self.camera_x = 0
         self.camera_y = 0
@@ -72,6 +73,12 @@ class OverworldScene:
         draw.rectangle([3, 5, 4, 7], fill=GB_PALETTE[3])
         return pygame.image.fromstring(img.tobytes(), img.size, img.mode)
 
+    def _initialize_party(self, names):
+        """Initialize party from list of names, creating fresh states with full HP."""
+        from .battle_scene import BattleScene
+        bs = BattleScene(self.manager)
+        return [bs.make_mascot_state(name) for name in names]
+
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
             # Save game state with party and inventory
@@ -87,7 +94,22 @@ class OverworldScene:
                 self.player.x = data["player"]["x"]
                 self.player.y = data["player"]["y"]
                 self.player.rect.topleft = (self.player.x, self.player.y)
-                self.party = data.get("party", ["Tux"])
+
+                # Load party - handle both old format (list of strings) and new format (list of dicts)
+                party_data = data.get("party", ["Tux"])
+                if party_data and isinstance(party_data[0], str):
+                    # Old format - migrate to new format
+                    self.party = self._initialize_party(party_data)
+                else:
+                    # New format - validate and use
+                    self.party = party_data
+                    # Validate party states have required keys
+                    for state in self.party:
+                        if not all(k in state for k in ["name", "hp", "max_hp", "atk", "defense", "spd", "type"]):
+                            # Invalid state, reinitialize
+                            self.party = self._initialize_party(["Tux"])
+                            break
+
                 if "inventory" in data:
                     self.inventory.from_dict(data["inventory"])
         # Interact with NPCs (spacebar)
@@ -110,11 +132,27 @@ class OverworldScene:
                         break
 
     def update(self, dt):
+        # Sync party HP from last battle
+        battle_states = getattr(self.manager, "last_battle_party_states", None)
+        if battle_states:
+            self.party = battle_states
+            delattr(self.manager, "last_battle_party_states")
+
+            # Check if this was a battle loss - reset player to spawn
+            if getattr(self.manager, "battle_loss_reset", False):
+                self.player.x = 2 * TILE_SIZE
+                self.player.y = 2 * TILE_SIZE
+                delattr(self.manager, "battle_loss_reset")
+
         # Check if a mascot was captured in the last battle and add to party
         captured_name = getattr(self.manager, "captured_mascot_name", None)
         if captured_name:
-            if captured_name not in self.party:
-                self.party.append(captured_name)
+            # Check if already in party (comparing against state dicts)
+            if not any(state["name"] == captured_name for state in self.party):
+                # Create fresh state with full HP
+                from .battle_scene import BattleScene
+                bs = BattleScene(self.manager)
+                self.party.append(bs.make_mascot_state(captured_name))
             # Clear the flag so we don't add it again
             delattr(self.manager, "captured_mascot_name")
 
@@ -141,14 +179,11 @@ class OverworldScene:
             self.steps += 1
             if self.steps >= self.encounter_steps:
                 from .battle_scene import BattleScene
-                mascots = [self._make_party_mascot(name) for name in self.party]
-                self.manager.push(BattleScene(self.manager, party=mascots, inventory=self.inventory))
+                # Pass party states to battle
+                self.manager.push(BattleScene(self.manager, party_states=self.party, inventory=self.inventory))
                 self.steps = 0
                 self.encounter_steps = random.randint(10, 20)
 
-    def _make_party_mascot(self, name):
-        from .battle_scene import BattleScene
-        return BattleScene(self.manager).make_mascot(name)
         # Camera follows player
         self.camera_x = max(0, min(self.player.x - SCREEN_WIDTH // 2, MAP_WIDTH * TILE_SIZE - SCREEN_WIDTH))
         self.camera_y = max(0, min(self.player.y - SCREEN_HEIGHT // 2, MAP_HEIGHT * TILE_SIZE - SCREEN_HEIGHT))
