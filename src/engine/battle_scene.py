@@ -89,6 +89,8 @@ class BattleScene:
         self.party_select_idx = 0
         self.forced_switch = False
         self.inventory = inventory
+        self.eff_msg = None
+        self.eff_msg_timer = 0
 
     @property
     def menu_names(self):
@@ -327,7 +329,9 @@ class BattleScene:
                     self.move_idx = (self.move_idx + 1) % moves_len
                 elif event.key in (pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER):
                     self._player_attack(self.move_idx)
-                    self.state = "menu"
+                    # Only return to menu if not in forced switch (player fainted)
+                    if self.state != self.STATE_PARTY_SELECT:
+                        self.state = "menu"
                 elif event.key == pygame.K_x:
                     self.state = "menu"
         elif self.state == "item_select":
@@ -393,8 +397,15 @@ class BattleScene:
         multiplier = TYPE_EFFECTIVENESS.get((move.type, self.opponent.type), 1.0)
         dmg = max(1, int((move.power + self.player.atk - self.opponent.defense) * multiplier))
         self.opponent.hp -= dmg
-        eff_msg = "" if multiplier == 1.0 else ("Super effective!" if multiplier > 1.0 else "Not very effective...")
-        self.msg = f"{self.player.name} used {move.name}! ({dmg} dmg) {eff_msg}"
+        if multiplier > 1.0:
+            self.eff_msg = "Super effective!"
+            self.eff_msg_timer = 1500
+        elif multiplier < 1.0:
+            self.eff_msg = "Not very effective..."
+            self.eff_msg_timer = 1500
+        else:
+            self.eff_msg = None
+        self.msg = f"{self.player.name} used {move.name}! ({dmg} dmg)"
         if self.opponent.hp <= 0:
             self.msg = f"{self.opponent.name} fainted!"
             self.battle_over = True
@@ -406,8 +417,15 @@ class BattleScene:
         multiplier = TYPE_EFFECTIVENESS.get((move.type, self.player.type), 1.0)
         dmg = max(1, int((move.power + self.opponent.atk - self.player.defense) * multiplier))
         self.player.hp -= dmg
-        eff_msg = "" if multiplier == 1.0 else ("Super effective!" if multiplier > 1.0 else "Not very effective...")
-        self.msg += f"\n{self.opponent.name} used {move.name}! ({dmg} dmg) {eff_msg}"
+        if multiplier > 1.0:
+            self.eff_msg = "Super effective!"
+            self.eff_msg_timer = 1500
+        elif multiplier < 1.0:
+            self.eff_msg = "Not very effective..."
+            self.eff_msg_timer = 1500
+        else:
+            self.eff_msg = None
+        self.msg += f"\n{self.opponent.name} used {move.name}! ({dmg} dmg)"
         if self.player.hp <= 0:
             self.player.hp = 0  # Clamp to zero
             self.party_states[self.active_idx]["fainted"] = True
@@ -498,29 +516,62 @@ class BattleScene:
         self.state = "menu"
 
     def update(self, dt):
-        pass
+        if self.eff_msg_timer > 0:
+            self.eff_msg_timer -= dt
+            if self.eff_msg_timer <= 0:
+                self.eff_msg = None
 
     def draw(self, surface):
-        surface.fill(GB_PALETTE[0])
-        # Draw mascots
-        surface.blit(self.player.sprite, (16, 64))
-        surface.blit(self.opponent.sprite, (112, 16))
-        # HP bars
-        pygame.draw.rect(surface, GB_PALETTE[3], (16, 56, 40, 4))
-        pygame.draw.rect(surface, GB_PALETTE[1], (16, 56, int(40 * self.player.hp / self.player.max_hp), 4))
-        pygame.draw.rect(surface, GB_PALETTE[3], (112, 8, 40, 4))
-        pygame.draw.rect(surface, GB_PALETTE[2], (112, 8, int(40 * self.opponent.hp / self.opponent.max_hp), 4))
-
         # Use a pixel font for crisp text if available, else fallback
         font_path = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf")
         menu_font_size = 12
         msg_font_size = 12
+        eff_font_size = 14
         if os.path.exists(font_path):
             menu_font = pygame.font.Font(font_path, menu_font_size)
             msg_font = pygame.font.Font(font_path, msg_font_size)
+            eff_font = pygame.font.Font(font_path, eff_font_size)
         else:
             menu_font = pygame.font.SysFont("Arial", menu_font_size, bold=True)
             msg_font = pygame.font.SysFont("Arial", msg_font_size, bold=True)
+            eff_font = pygame.font.SysFont("Arial", eff_font_size, bold=True)
+
+        surface.fill(GB_PALETTE[0])
+        # Draw mascots
+        surface.blit(self.player.sprite, (16, 64))
+        surface.blit(self.opponent.sprite, (112, 16))
+        # Player Mascot Info
+        player_name_text = menu_font.render(f"{self.player.name} [{self.player.type}]", True, GB_PALETTE[3])
+        surface.blit(player_name_text, (16, 40))
+        pygame.draw.rect(surface, GB_PALETTE[3], (16, 56, 60, 6))
+        pygame.draw.rect(surface, GB_PALETTE[1], (16, 56, int(60 * self.player.hp / self.player.max_hp), 6))
+        player_hp_text = menu_font.render(f"{self.player.hp}/{self.player.max_hp}", True, GB_PALETTE[3])
+        surface.blit(player_hp_text, (80, 52))
+
+        # Opponent Mascot Info
+        opponent_name_text = menu_font.render(f"{self.opponent.name} [{self.opponent.type}]", True, GB_PALETTE[3])
+        surface.blit(opponent_name_text, (112, 0))
+        pygame.draw.rect(surface, GB_PALETTE[3], (112, 18, 60, 6))
+        pygame.draw.rect(surface, GB_PALETTE[2], (112, 18, int(60 * self.opponent.hp / self.opponent.max_hp), 6))
+        opponent_hp_text = menu_font.render(f"{self.opponent.hp}/{self.opponent.max_hp}", True, GB_PALETTE[3])
+        surface.blit(opponent_hp_text, (176, 14))
+
+        if self.eff_msg:
+            color = GB_PALETTE[3]  # Default color
+            if "Super effective" in self.eff_msg:
+                color = GB_PALETTE[3]  # Darkest
+            elif "Not very effective" in self.eff_msg:
+                color = GB_PALETTE[2]  # Dark gray
+
+            eff_text_surf = eff_font.render(self.eff_msg, True, color)
+            eff_text_rect = eff_text_surf.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 70))
+
+            # Create a small box for the message
+            box_rect = eff_text_rect.inflate(20, 10)
+            pygame.draw.rect(surface, GB_PALETTE[1], box_rect)
+            pygame.draw.rect(surface, GB_PALETTE[3], box_rect, 1)
+
+            surface.blit(eff_text_surf, eff_text_rect)
 
         window_y = SCREEN_HEIGHT - 56
         if self.state == "menu":
@@ -556,7 +607,8 @@ class BattleScene:
             pygame.draw.rect(surface, GB_PALETTE[3], (0, window_y, SCREEN_WIDTH, window_height), 1)
             for i, move in enumerate(moves):
                 color = GB_PALETTE[3] if self.move_idx == i else GB_PALETTE[2]
-                text = menu_font.render(f"{move.name} ({move.type})", True, color)
+                move_text = f"{move.name:<10} {move.power:>2} PWR [{move.type}]"
+                text = menu_font.render(move_text, True, color)
                 surface.blit(text, (8, window_y + 4 + i * 14))
             text = msg_font.render("Choose a move (Z/Enter to confirm, X to cancel)", True, GB_PALETTE[3])
             surface.blit(text, (8, window_y + 4 + len(moves) * 14))
@@ -576,19 +628,38 @@ class BattleScene:
             text = msg_font.render("Choose an item (Z/Enter to use, X to cancel)", True, GB_PALETTE[3])
             surface.blit(text, (8, window_y + 4 + max(1, len(items)) * 14))
         elif self.state == self.STATE_PARTY_SELECT:
-            # Draw party selection menu
-            prompt = "Choose next mascot!" if self.forced_switch else "Choose a mascot to switch to:"
-            window_height = 4 + len(self.party) * 18 + 18
-            pygame.draw.rect(surface, GB_PALETTE[1], (0, window_y, SCREEN_WIDTH, window_height))
-            pygame.draw.rect(surface, GB_PALETTE[3], (0, window_y, SCREEN_WIDTH, window_height), 1)
+            # Draw party selection menu - Pokemon Red/Blue style full-screen overlay
+            # Semi-transparent background (draw pattern for GB aesthetic)
+            for y in range(0, SCREEN_HEIGHT, 2):
+                pygame.draw.line(surface, GB_PALETTE[2], (0, y), (SCREEN_WIDTH, y))
 
-            # Draw prompt
+            prompt = "Choose next mascot!" if self.forced_switch else "Switch to:"
+
+            # Calculate menu dimensions
+            menu_item_height = 16  # Reduced from 18 for compactness
+            menu_padding = 8
+            menu_width = SCREEN_WIDTH - 16
+            menu_x = 8
+
+            # Start higher on screen to fit more mascots
+            menu_y = 30
+            header_height = 18
+            footer_height = 14
+            party_list_height = len(self.party) * menu_item_height
+            menu_height = header_height + party_list_height + footer_height + menu_padding * 2
+
+            # Draw main menu box
+            pygame.draw.rect(surface, GB_PALETTE[1], (menu_x, menu_y, menu_width, menu_height))
+            pygame.draw.rect(surface, GB_PALETTE[3], (menu_x, menu_y, menu_width, menu_height), 2)
+
+            # Draw prompt/header
             text = msg_font.render(prompt, True, GB_PALETTE[3])
-            surface.blit(text, (8, window_y + 4))
+            surface.blit(text, (menu_x + menu_padding, menu_y + menu_padding))
 
             # Draw party members
+            list_start_y = menu_y + header_height + menu_padding
             for i, mascot in enumerate(self.party):
-                y_offset = window_y + 22 + i * 18
+                y_offset = list_start_y + i * menu_item_height
                 is_fainted = self.party_states[i].get("fainted", False)
                 is_active = (i == self.active_idx)
                 is_selected = (i == self.party_select_idx)
@@ -596,10 +667,10 @@ class BattleScene:
                 # Determine color based on state
                 if is_fainted:
                     color = GB_PALETTE[2]  # Grayed out
-                    status = "FAINT"
+                    status = "FNT"
                 elif is_active:
                     color = GB_PALETTE[2]  # Can't switch to active
-                    status = "ACTIVE"
+                    status = "ACT"
                 elif is_selected:
                     color = GB_PALETTE[3]  # Highlighted
                     status = ""
@@ -610,30 +681,41 @@ class BattleScene:
                 # Draw cursor for selected
                 if is_selected and not is_fainted and not is_active:
                     cursor_text = menu_font.render(">", True, GB_PALETTE[3])
-                    surface.blit(cursor_text, (8, y_offset))
+                    surface.blit(cursor_text, (menu_x + menu_padding, y_offset))
 
-                # Draw name
-                name_text = menu_font.render(mascot.name, True, color)
-                surface.blit(name_text, (20, y_offset))
+                # Draw name (shortened to fit better)
+                name_x = menu_x + menu_padding + 12
+                name_text = menu_font.render(mascot.name[:12], True, color)  # Truncate long names
+                surface.blit(name_text, (name_x, y_offset))
 
                 # Draw HP bar or status
+                bar_x = menu_x + 110
                 if is_fainted or is_active:
                     status_text = menu_font.render(status, True, color)
-                    surface.blit(status_text, (120, y_offset))
+                    surface.blit(status_text, (bar_x, y_offset))
                 else:
-                    # Draw small HP bar
-                    bar_width = 40
-                    hp_width = int(bar_width * mascot.hp / mascot.max_hp)
-                    pygame.draw.rect(surface, GB_PALETTE[3], (120, y_offset + 2, bar_width, 8))
-                    pygame.draw.rect(surface, GB_PALETTE[1], (120, y_offset + 2, hp_width, 8))
-                    hp_text = menu_font.render(f"{mascot.hp}/{mascot.max_hp}", True, color)
-                    surface.blit(hp_text, (165, y_offset))
+                    # Draw compact HP bar
+                    bar_width = 50
+                    bar_height = 6
+                    hp_ratio = mascot.hp / mascot.max_hp if mascot.max_hp > 0 else 0
+                    hp_width = int(bar_width * hp_ratio)
 
-            # Draw controls hint
-            cancel_text = "" if self.forced_switch else ", X to cancel"
-            hint = f"Z/Enter to confirm{cancel_text}"
+                    # HP bar background
+                    pygame.draw.rect(surface, GB_PALETTE[3], (bar_x, y_offset + 4, bar_width, bar_height))
+                    # HP bar fill
+                    if hp_width > 0:
+                        pygame.draw.rect(surface, GB_PALETTE[1], (bar_x, y_offset + 4, hp_width, bar_height))
+
+                    # HP text
+                    hp_text = menu_font.render(f"{mascot.hp}/{mascot.max_hp}", True, color)
+                    surface.blit(hp_text, (bar_x + bar_width + 4, y_offset))
+
+            # Draw controls hint at bottom
+            footer_y = list_start_y + party_list_height + 4
+            cancel_text = "" if self.forced_switch else " X:Back"
+            hint = f"Z/Enter:OK{cancel_text}"
             text = msg_font.render(hint, True, GB_PALETTE[3])
-            surface.blit(text, (8, window_y + 22 + len(self.party) * 18))
+            surface.blit(text, (menu_x + menu_padding, footer_y))
         else:
             msg_lines = self.msg.split("\n")
             window_height = 4 + len(msg_lines) * 14 + 4
