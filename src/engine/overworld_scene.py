@@ -195,6 +195,48 @@ class OverworldScene:
 
             surface.blit(text_surf, text_rect)
 
+    def _save_game(self):
+        """Save game state with notification."""
+        SaveManager.save({
+            "player": {"x": self.player.x, "y": self.player.y},
+            "party": self.party,
+            "inventory": self.inventory.to_dict(),
+        })
+        self.notification_text = "Game saved!"
+        self.notification_timer = 2
+
+    def _load_game(self):
+        """Load game state with notification."""
+        data = SaveManager.load()
+        if data:
+            self.player.x = data["player"]["x"]
+            self.player.y = data["player"]["y"]
+            self.player.rect.topleft = (self.player.x, self.player.y)
+
+            # Load party - handle both old format (list of strings) and new format (list of dicts)
+            party_data = data.get("party", ["Tux"])
+            if party_data and isinstance(party_data[0], str):
+                # Old format - migrate to new format
+                self.party = self._initialize_party(party_data)
+            else:
+                # New format - validate and use
+                self.party = party_data
+                # Validate party states have required keys
+                for state in self.party:
+                    if not all(k in state for k in ["name", "hp", "max_hp", "atk", "defense", "spd", "type"]):
+                        # Invalid state, reinitialize
+                        self.party = self._initialize_party(["Tux"])
+                        break
+
+            if "inventory" in data:
+                self.inventory.from_dict(data["inventory"])
+
+            self.notification_text = "Game loaded!"
+            self.notification_timer = 2
+        else:
+            self.notification_text = "No save file found!"
+            self.notification_timer = 2
+
     def draw_control_hints(self, surface):
         """Draw the control hints at the bottom of the screen."""
         if self.show_controls_hint:
@@ -229,45 +271,9 @@ class OverworldScene:
             return
         
         if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
-            # Save game state with party and inventory
-            SaveManager.save({
-                "player": {"x": self.player.x, "y": self.player.y},
-                "party": self.party,
-                "inventory": self.inventory.to_dict(),
-            })
-            self.notification_text = "Game saved!"
-            self.notification_timer = 2
+            self._save_game()
         if event.type == pygame.KEYDOWN and event.key == pygame.K_l:
-            # Load game state with party and inventory
-            data = SaveManager.load()
-            if data:
-                self.player.x = data["player"]["x"]
-                self.player.y = data["player"]["y"]
-                self.player.rect.topleft = (self.player.x, self.player.y)
-
-                # Load party - handle both old format (list of strings) and new format (list of dicts)
-                party_data = data.get("party", ["Tux"])
-                if party_data and isinstance(party_data[0], str):
-                    # Old format - migrate to new format
-                    self.party = self._initialize_party(party_data)
-                else:
-                    # New format - validate and use
-                    self.party = party_data
-                    # Validate party states have required keys
-                    for state in self.party:
-                        if not all(k in state for k in ["name", "hp", "max_hp", "atk", "defense", "spd", "type"]):
-                            # Invalid state, reinitialize
-                            self.party = self._initialize_party(["Tux"])
-                            break
-
-                if "inventory" in data:
-                    self.inventory.from_dict(data["inventory"])
-                
-                self.notification_text = "Game loaded!"
-                self.notification_timer = 2
-            else:
-                self.notification_text = "No save file found!"
-                self.notification_timer = 2
+            self._load_game()
         # Interact with NPCs (spacebar)
         if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
             if self.active_dialogue and self.active_npc:
@@ -288,40 +294,15 @@ class OverworldScene:
                         break
 
     def _execute_pause_action(self):
+        """Execute selected pause menu action."""
         selected_option = self.pause_menu_options[self.pause_menu_idx]
         if selected_option == "Continue":
             self.is_paused = False
         elif selected_option == "Save":
-            SaveManager.save({
-                "player": {"x": self.player.x, "y": self.player.y},
-                "party": self.party,
-                "inventory": self.inventory.to_dict(),
-            })
-            self.notification_text = "Game saved!"
-            self.notification_timer = 2
+            self._save_game()
             self.is_paused = False
         elif selected_option == "Load":
-            data = SaveManager.load()
-            if data:
-                self.player.x = data["player"]["x"]
-                self.player.y = data["player"]["y"]
-                self.player.rect.topleft = (self.player.x, self.player.y)
-                party_data = data.get("party", ["Tux"])
-                if party_data and isinstance(party_data[0], str):
-                    self.party = self._initialize_party(party_data)
-                else:
-                    self.party = party_data
-                    for state in self.party:
-                        if not all(k in state for k in ["name", "hp", "max_hp", "atk", "defense", "spd", "type"]):
-                            self.party = self._initialize_party(["Tux"])
-                            break
-                if "inventory" in data:
-                    self.inventory.from_dict(data["inventory"])
-                self.notification_text = "Game loaded!"
-                self.notification_timer = 2
-            else:
-                self.notification_text = "No save file found!"
-                self.notification_timer = 2
+            self._load_game()
             self.is_paused = False
         elif selected_option == "Toggle Hints":
             self.show_controls_hint = not self.show_controls_hint
