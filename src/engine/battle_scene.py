@@ -50,8 +50,9 @@ class BattleScene:
     STATE_PARTY_SELECT = "party_select"
     STATE_MESSAGE = "message"
 
-    def __init__(self, manager, party_states=None, inventory=None):
+    def __init__(self, manager, party_states=None, inventory=None, opponent_party=None, is_trainer_battle=False):
         self.manager = manager
+        self.is_trainer_battle = is_trainer_battle
 
         # Default party if none provided
         if party_states is None:
@@ -78,10 +79,19 @@ class BattleScene:
                 break
 
         self.player = self.party[self.active_idx]
-        self.opponent = self.make_mascot("Octocat")
+
+        # Set up opponent based on battle type
+        if is_trainer_battle and opponent_party:
+            # Trainer battle - use first mascot from opponent party
+            self.opponent = opponent_party[0]
+            self.msg = f"Trainer challenges you with {self.opponent.name}!"
+        else:
+            # Wild encounter
+            self.opponent = self.make_mascot("Octocat")
+            self.msg = "A wild Octocat appeared!"
+
         self.menu_idx = 0
         self.state = self.STATE_MENU
-        self.msg = "A wild Octocat appeared!"
         self.captured = False
         self.battle_over = False
         self.move_idx = 0
@@ -311,8 +321,12 @@ class BattleScene:
                         else:
                             self.msg = "No items available!"
                     elif self.menu_idx == self.MENU_FLEE:
-                        self.msg = "You fled!"
-                        self.battle_over = True
+                        if self.is_trainer_battle:
+                            self.msg = "You can't flee from a trainer battle!"
+                            self.state = "menu"
+                        else:
+                            self.msg = "You fled!"
+                            self.battle_over = True
                     elif len(self.party) > 1 and self.menu_idx == self.menu_names.index("Switch"):
                         self._switch_party()
         elif self.state == "move_select":
@@ -484,6 +498,12 @@ class BattleScene:
 
     def _try_capture(self):
         """Attempt to capture wild mascot using a package."""
+        # Cannot capture trainer's mascots
+        if self.is_trainer_battle:
+            self.msg = "You can't capture a trainer's mascot!"
+            self.state = "menu"
+            return
+
         # Check if player has packages
         if not self.inventory or not self.inventory.has_item("package"):
             self.msg = "No packages available!"

@@ -15,3 +15,18 @@
   dialogue:
     - "I'm Ada, the code wizard."
     - "Try using Editor-type moves for a surprise!"
+- id: trainer_1
+  name: Richard
+  x: 8
+  y: 10
+  sprite: trainer
+  trainer: true
+  party:
+    - "BSD Daemon"
+    - "Tux"
+  dialogue:
+    - "Hey! I'm a trainer!"
+    - "Let's battle!"
+  defeated_dialogue:
+    - "You're really strong!"
+    - "I need to train more..."

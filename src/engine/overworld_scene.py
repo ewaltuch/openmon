@@ -197,10 +197,17 @@ class OverworldScene:
 
     def _save_game(self):
         """Save game state with notification."""
+        # Save defeated trainer states
+        defeated_npcs = {}
+        for npc in self.npcs:
+            if npc.trainer and npc.defeated:
+                defeated_npcs[npc.id] = True
+
         SaveManager.save({
             "player": {"x": self.player.x, "y": self.player.y},
             "party": self.party,
             "inventory": self.inventory.to_dict(),
+            "defeated_npcs": defeated_npcs,
         })
         self.notification_text = "Game saved!"
         self.notification_timer = 2
@@ -230,6 +237,24 @@ class OverworldScene:
 
             if "inventory" in data:
                 self.inventory.from_dict(data["inventory"])
+
+            # Reset all trainers to undefeated, then restore from save
+            for npc in self.npcs:
+                if npc.trainer:
+                    npc.defeated = False
+
+            # Restore defeated trainer states from save file
+            defeated_npcs = data.get("defeated_npcs", {})
+            for npc in self.npcs:
+                if npc.id in defeated_npcs:
+                    npc.defeated = True
+
+            # Clear dialogue state (NPCs are freshly loaded, old references are invalid)
+            self.active_dialogue = None
+            self.active_npc = None
+
+            # Ensure game is not paused after loading
+            self.is_paused = False
 
             self.notification_text = "Game loaded!"
             self.notification_timer = 2
@@ -282,7 +307,25 @@ class OverworldScene:
                 if next_line:
                     self.active_dialogue = next_line
                 else:
-                    # No more dialogue, close the dialogue box
+                    # No more dialogue, check if this is a trainer battle
+                    if self.active_npc.is_trainer():
+                        # Start trainer battle
+                        from .battle_scene import BattleScene
+                        # Create trainer party states and hydrate to Mascot objects
+                        trainer_party_states = self._initialize_party(self.active_npc.party)
+                        bs = BattleScene(self.manager)
+                        trainer_party = [bs.hydrate_mascot(state) for state in trainer_party_states]
+                        battle = BattleScene(
+                            self.manager,
+                            party_states=self.party,
+                            inventory=self.inventory,
+                            opponent_party=trainer_party,
+                            is_trainer_battle=True
+                        )
+                        self.manager.push(battle)
+                        # Mark trainer as defeated (will be set when returning from battle)
+                        self.active_npc.defeated = True
+                    # Close the dialogue box
                     self.active_dialogue = None
                     self.active_npc = None
             else:

@@ -197,3 +197,23 @@ class TestInventoryManager:
 
         assert result is False
         assert inventory.get_item_count("nonexistent_item") == 0
+
+    def test_backwards_compatibility_old_inventory_format(self):
+        """Test loading old save format (list instead of dict)."""
+        inventory = InventoryManager()
+
+        # Old format: list of item IDs
+        old_format_data = ["package", "health_pack", "package"]
+        inventory.from_dict(old_format_data)
+
+        # Should convert to new format with counts
+        assert inventory.get_item_count("package") >= 1
+        assert inventory.get_item_count("health_pack") >= 1
+
+        # New format: dict with "items" key
+        inventory2 = InventoryManager()
+        new_format_data = {"items": {"package": 5, "health_pack": 3}}
+        inventory2.from_dict(new_format_data)
+
+        assert inventory2.get_item_count("package") == 5
+        assert inventory2.get_item_count("health_pack") == 3

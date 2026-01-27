@@ -147,4 +147,13 @@ class InventoryManager:
 
     def from_dict(self, data):
         """Load inventory from dictionary."""
-        self.items = data.get("items", {})
+        # Handle old format (list) and new format (dict with "items" key)
+        if isinstance(data, list):
+            # Old format: list of item IDs - convert to dict with count 1
+            self.items = {item_id: 1 for item_id in data}
+        elif isinstance(data, dict):
+            # New format: dict with "items" key
+            self.items = data.get("items", {})
+        else:
+            # Fallback to empty inventory
+            self.items = {}
