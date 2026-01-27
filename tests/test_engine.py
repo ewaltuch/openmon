@@ -1,6 +1,5 @@
-import pytest
-import pygame
 from src.engine.game import Game
+
 
 def test_game_init():
     game = Game()
@@ -8,8 +7,10 @@ def test_game_init():
     assert game.screen.get_height() == 160
     assert game.manager is not None
 
+
 def test_npc_collision_and_dialogue():
     from src.engine.overworld_scene import OverworldScene
+
     mgr = type("DummyManager", (), {"scenes": []})()
     scene = OverworldScene(mgr)
     # Place player on top of first NPC

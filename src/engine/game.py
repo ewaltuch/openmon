@@ -1,16 +1,20 @@
 """
 Game loop and main engine entry point for Open-Mon.
 """
+
 import pygame
 from .scene_manager import SceneManager
 from .scenes import TitleScene
 
 
 from src.constants import SCREEN_WIDTH, SCREEN_HEIGHT
+
 FPS = 60
+
 
 class Game:
     """Main game engine class."""
+
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))

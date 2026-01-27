@@ -2,7 +2,7 @@
 Constants for Open-Mon. All global settings and palette definitions.
 """
 
- # Game Boy Advance native resolution
+# Game Boy Advance native resolution
 SCREEN_WIDTH = 240
 SCREEN_HEIGHT = 160
 FPS = 60
@@ -11,8 +11,8 @@ FPS = 60
 GB_PALETTE = [
     (224, 248, 208),  # White
     (136, 192, 112),  # Light gray
-    (52, 104, 86),    # Dark gray
-    (8, 24, 32),      # Black
+    (52, 104, 86),  # Dark gray
+    (8, 24, 32),  # Black
 ]
 
 # Asset paths

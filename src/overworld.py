@@ -1,13 +1,15 @@
 """
 Overworld MVP for Open-Mon: tile map, player movement, collision, camera.
 """
+
 import pygame
 import csv
-from src.constants import SCREEN_WIDTH, SCREEN_HEIGHT, GB_PALETTE, SPRITE_DIR
+from src.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 
 TILE_SIZE = 8
 MAP_WIDTH = SCREEN_WIDTH // TILE_SIZE
 MAP_HEIGHT = SCREEN_HEIGHT // TILE_SIZE
+
 
 class TileMap:
     def __init__(self, csv_path):
@@ -24,6 +26,7 @@ class TileMap:
             for x, tile in enumerate(row):
                 img = tile_images[tile]
                 surface.blit(img, (x * TILE_SIZE - camera_x, y * TILE_SIZE - camera_y))
+
 
 class Player:
     def __init__(self, x, y, images):

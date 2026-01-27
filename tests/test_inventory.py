@@ -1,9 +1,9 @@
 """
 Tests for the inventory system in Open-Mon.
 """
-import pytest
+
 from src.engine.inventory import Item, InventoryManager
-from src.engine.battle_scene import Mascot, Move
+from src.engine.battle_scene import Mascot
 
 
 class TestItem:
@@ -15,7 +15,13 @@ class TestItem:
         assert package.name == "Package"
         assert package.type == Item.TYPE_PACKAGE
 
-        health_pack = Item("health_pack", "Health Pack", "Heals 20 HP", Item.TYPE_CONSUMABLE, {"heal": 20})
+        health_pack = Item(
+            "health_pack",
+            "Health Pack",
+            "Heals 20 HP",
+            Item.TYPE_CONSUMABLE,
+            {"heal": 20},
+        )
         assert health_pack.name == "Health Pack"
         assert health_pack.effect == {"heal": 20}
 
@@ -26,7 +32,13 @@ class TestItem:
         mascot.hp = 10
 
         # Create and use a health pack
-        health_pack = Item("health_pack", "Health Pack", "Heals 20 HP", Item.TYPE_CONSUMABLE, {"heal": 20})
+        health_pack = Item(
+            "health_pack",
+            "Health Pack",
+            "Heals 20 HP",
+            Item.TYPE_CONSUMABLE,
+            {"heal": 20},
+        )
         consumed = health_pack.use(mascot)
 
         assert consumed is True
@@ -37,7 +49,13 @@ class TestItem:
         mascot = Mascot("Tux", 24, 8, 6, 7, None, [], "Kernel")
         mascot.hp = 5
 
-        full_restore = Item("full_restore", "Full Restore", "Fully heals", Item.TYPE_CONSUMABLE, {"full_heal": True})
+        full_restore = Item(
+            "full_restore",
+            "Full Restore",
+            "Fully heals",
+            Item.TYPE_CONSUMABLE,
+            {"full_heal": True},
+        )
         consumed = full_restore.use(mascot)
 
         assert consumed is True
@@ -48,7 +66,13 @@ class TestItem:
         mascot = Mascot("Tux", 24, 8, 6, 7, None, [], "Kernel")
         mascot.hp = 24
 
-        health_pack = Item("health_pack", "Health Pack", "Heals 20 HP", Item.TYPE_CONSUMABLE, {"heal": 20})
+        health_pack = Item(
+            "health_pack",
+            "Health Pack",
+            "Heals 20 HP",
+            Item.TYPE_CONSUMABLE,
+            {"heal": 20},
+        )
         consumed = health_pack.use(mascot)
 
         assert consumed is False

@@ -54,35 +54,35 @@ class InventoryManager:
                 "package",
                 "Package",
                 "Used to capture wild mascots. Higher success rate when opponent HP is low.",
-                Item.TYPE_PACKAGE
+                Item.TYPE_PACKAGE,
             ),
             "health_pack": Item(
                 "health_pack",
                 "Health Pack",
                 "Restores 20 HP to a mascot.",
                 Item.TYPE_CONSUMABLE,
-                {"heal": 20}
+                {"heal": 20},
             ),
             "full_restore": Item(
                 "full_restore",
                 "Full Restore",
                 "Fully restores HP to a mascot.",
                 Item.TYPE_CONSUMABLE,
-                {"full_heal": True}
+                {"full_heal": True},
             ),
             "revive": Item(
                 "revive",
                 "Revive",
                 "Revives a fainted mascot with half HP.",
                 Item.TYPE_CONSUMABLE,
-                {"revive": True}
+                {"revive": True},
             ),
             "repo_key": Item(
                 "repo_key",
                 "Repository Key",
                 "A key to unlock the main repository.",
-                Item.TYPE_KEY
-            )
+                Item.TYPE_KEY,
+            ),
         }
 
     def add_item(self, item_id, quantity=1):

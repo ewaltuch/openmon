@@ -1,6 +1,7 @@
 """
 Test that defeated trainer state persists across save/load.
 """
+
 import pygame
 from src.engine.scene_manager import SceneManager
 from src.engine.overworld_scene import OverworldScene
@@ -9,7 +10,7 @@ from src.engine.overworld_scene import OverworldScene
 def test_trainer_defeated_state_saves_and_restores():
     """Test that defeated trainer status is saved and loaded correctly."""
     pygame.init()
-    screen = pygame.display.set_mode((240, 160))
+    _screen = pygame.display.set_mode((240, 160))
 
     # Create overworld scene
     manager = SceneManager()
@@ -57,7 +58,7 @@ def test_trainer_defeated_state_saves_and_restores():
 def test_load_old_save_resets_trainer_state():
     """Test that loading an old save properly resets trainer defeated state."""
     pygame.init()
-    screen = pygame.display.set_mode((240, 160))
+    _screen = pygame.display.set_mode((240, 160))
 
     manager = SceneManager()
     scene = OverworldScene(manager)
@@ -83,7 +84,9 @@ def test_load_old_save_resets_trainer_state():
     scene._load_game()
 
     # Step 4: Trainer should be undefeated again
-    assert trainer.defeated is False, "Loading old save should reset trainer to undefeated"
+    assert (
+        trainer.defeated is False
+    ), "Loading old save should reset trainer to undefeated"
     assert trainer.is_trainer() is True, "Trainer should be able to battle again"
 
     # Clean up

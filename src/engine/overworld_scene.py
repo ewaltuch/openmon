@@ -1,32 +1,40 @@
-from .save import SaveManager
 """
 OverworldScene implementation for Open-Mon.
 """
-import pygame
-from src.overworld import TileMap, Player, TILE_SIZE, MAP_WIDTH, MAP_HEIGHT
-from src.constants import GB_PALETTE, SPRITE_DIR, SCREEN_WIDTH, SCREEN_HEIGHT
+
 import os
+import random
+
+import pygame
 from PIL import Image, ImageDraw
 
+from src.constants import GB_PALETTE, SCREEN_HEIGHT, SCREEN_WIDTH, SPRITE_DIR
+from src.overworld import MAP_HEIGHT, MAP_WIDTH, TILE_SIZE, Player, TileMap
 
-import random
+from .save import SaveManager
+
 
 class OverworldScene:
     def npc_collides(self, x, y):
         # Check if player's bounding box overlaps any NPC tile
         player_rect = pygame.Rect(x, y, TILE_SIZE, TILE_SIZE)
         for npc in self.npcs:
-            npc_rect = pygame.Rect(npc.x * TILE_SIZE, npc.y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            npc_rect = pygame.Rect(
+                npc.x * TILE_SIZE, npc.y * TILE_SIZE, TILE_SIZE, TILE_SIZE
+            )
             if player_rect.colliderect(npc_rect):
                 return True
         return False
+
     def __init__(self, manager, inventory=None):
         self.manager = manager
         self.tile_images = self._generate_tiles()
         self.tilemap = TileMap(os.path.join(SPRITE_DIR, "tiles.csv"))
         # Initialize party as state dictionaries
         self.party = self._initialize_party(["Tux", "BSD Daemon"])
-        self.player = Player(2 * TILE_SIZE, 2 * TILE_SIZE, [self._generate_player_sprite()])
+        self.player = Player(
+            2 * TILE_SIZE, 2 * TILE_SIZE, [self._generate_player_sprite()]
+        )
         self.camera_x = 0
         self.camera_y = 0
         self.steps = 0
@@ -35,11 +43,15 @@ class OverworldScene:
         self._last_battle_captured_name = None
         # Load NPCs
         from src.engine.npc import load_npcs
-        self.npcs = load_npcs(os.path.join(os.path.dirname(__file__), "..", "..", "assets", "npcs.yaml"))
+
+        self.npcs = load_npcs(
+            os.path.join(os.path.dirname(__file__), "..", "..", "assets", "npcs.yaml")
+        )
         self.active_dialogue = None
         self.active_npc = None
         # Inventory system
         from src.engine.inventory import InventoryManager
+
         self.inventory = inventory or InventoryManager()
         # Give player starting items
         if not inventory:
@@ -85,6 +97,7 @@ class OverworldScene:
     def _initialize_party(self, names):
         """Initialize party from list of names, creating fresh states with full HP."""
         from .battle_scene import BattleScene
+
         bs = BattleScene(self.manager)
         return [bs.make_mascot_state(name) for name in names]
 
@@ -104,7 +117,9 @@ class OverworldScene:
             return
 
         # Use a pixel font for crisp text if available, else fallback
-        font_path = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf")
+        font_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf"
+        )
         if os.path.exists(font_path):
             font = pygame.font.Font(font_path, 10)
         else:
@@ -124,14 +139,16 @@ class OverworldScene:
         surface.blit(name_text, (hud_x + 4, hud_y + 2))
 
         # Draw HP
-        hp_text = font.render(f"HP: {active['hp']}/{active['max_hp']}", True, GB_PALETTE[3])
+        hp_text = font.render(
+            f"HP: {active['hp']}/{active['max_hp']}", True, GB_PALETTE[3]
+        )
         surface.blit(hp_text, (hud_x + 4, hud_y + 12))
 
         # HP bar
         bar_w = 68
         bar_h = 6
-        hp_ratio = active['hp'] / active['max_hp']
-        
+        hp_ratio = active["hp"] / active["max_hp"]
+
         bar_x = hud_x + 4
         bar_y = hud_y + 22
 
@@ -141,7 +158,9 @@ class OverworldScene:
         # Draw the filled portion of the HP bar
         fill_width = int((bar_w - 2) * hp_ratio)
         if fill_width > 0:
-            pygame.draw.rect(surface, GB_PALETTE[2], (bar_x + 1, bar_y + 1, fill_width, bar_h - 2))
+            pygame.draw.rect(
+                surface, GB_PALETTE[2], (bar_x + 1, bar_y + 1, fill_width, bar_h - 2)
+            )
 
     def draw_pause_menu(self, surface):
         """Draw the pause menu overlay."""
@@ -155,39 +174,45 @@ class OverworldScene:
         menu_h = 20 + len(self.pause_menu_options) * 16
         menu_x = SCREEN_WIDTH // 2 - menu_w // 2
         menu_y = SCREEN_HEIGHT // 2 - menu_h // 2
-        
+
         pygame.draw.rect(surface, GB_PALETTE[1], (menu_x, menu_y, menu_w, menu_h))
         pygame.draw.rect(surface, GB_PALETTE[3], (menu_x, menu_y, menu_w, menu_h), 2)
 
         # Menu items
-        font_path = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf")
+        font_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf"
+        )
         if os.path.exists(font_path):
             font = pygame.font.Font(font_path, 12)
         else:
             font = pygame.font.SysFont("Arial", 12, bold=True)
-            
+
         for i, item in enumerate(self.pause_menu_options):
             color = GB_PALETTE[3] if i == self.pause_menu_idx else GB_PALETTE[2]
-            
+
             # Add a cursor to the selected item
             display_text = f"> {item}" if i == self.pause_menu_idx else item
-            
+
             text = font.render(display_text, True, color)
-            
+
             text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, menu_y + 15 + i * 16))
             surface.blit(text, text_rect)
 
     def draw_notification(self, surface):
         """Draw the notification message box."""
         if self.notification_text:
-            font_path = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf")
+            font_path = os.path.join(
+                os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf"
+            )
             if os.path.exists(font_path):
                 font = pygame.font.Font(font_path, 12)
             else:
                 font = pygame.font.SysFont("Arial", 12, bold=True)
-            
+
             text_surf = font.render(self.notification_text, True, GB_PALETTE[3])
-            text_rect = text_surf.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 20))
+            text_rect = text_surf.get_rect(
+                center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 20)
+            )
 
             box_rect = text_rect.inflate(20, 10)
             pygame.draw.rect(surface, GB_PALETTE[1], box_rect)
@@ -203,12 +228,14 @@ class OverworldScene:
             if npc.trainer and npc.defeated:
                 defeated_npcs[npc.id] = True
 
-        SaveManager.save({
-            "player": {"x": self.player.x, "y": self.player.y},
-            "party": self.party,
-            "inventory": self.inventory.to_dict(),
-            "defeated_npcs": defeated_npcs,
-        })
+        SaveManager.save(
+            {
+                "player": {"x": self.player.x, "y": self.player.y},
+                "party": self.party,
+                "inventory": self.inventory.to_dict(),
+                "defeated_npcs": defeated_npcs,
+            }
+        )
         self.notification_text = "Game saved!"
         self.notification_timer = 2
 
@@ -230,7 +257,18 @@ class OverworldScene:
                 self.party = party_data
                 # Validate party states have required keys
                 for state in self.party:
-                    if not all(k in state for k in ["name", "hp", "max_hp", "atk", "defense", "spd", "type"]):
+                    if not all(
+                        k in state
+                        for k in [
+                            "name",
+                            "hp",
+                            "max_hp",
+                            "atk",
+                            "defense",
+                            "spd",
+                            "type",
+                        ]
+                    ):
                         # Invalid state, reinitialize
                         self.party = self._initialize_party(["Tux"])
                         break
@@ -265,7 +303,9 @@ class OverworldScene:
     def draw_control_hints(self, surface):
         """Draw the control hints at the bottom of the screen."""
         if self.show_controls_hint:
-            font_path = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf")
+            font_path = os.path.join(
+                os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf"
+            )
             if os.path.exists(font_path):
                 font = pygame.font.Font(font_path, 12)
             else:
@@ -273,10 +313,10 @@ class OverworldScene:
 
             hint_text = "Arrows:Move | Space:Talk | S:Save | L:Load | ESC:Menu"
             text_surf = font.render(hint_text, True, GB_PALETTE[3])
-            text_rect = text_surf.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 8))
+            text_rect = text_surf.get_rect(
+                center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 8)
+            )
             surface.blit(text_surf, text_rect)
-
-
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -286,15 +326,19 @@ class OverworldScene:
         if self.is_paused:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
-                    self.pause_menu_idx = (self.pause_menu_idx - 1) % len(self.pause_menu_options)
+                    self.pause_menu_idx = (self.pause_menu_idx - 1) % len(
+                        self.pause_menu_options
+                    )
                 elif event.key == pygame.K_DOWN:
-                    self.pause_menu_idx = (self.pause_menu_idx + 1) % len(self.pause_menu_options)
+                    self.pause_menu_idx = (self.pause_menu_idx + 1) % len(
+                        self.pause_menu_options
+                    )
                 elif event.key in (pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER):
                     self._execute_pause_action()
                 elif event.key == pygame.K_x:
                     self.is_paused = False
             return
-        
+
         if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
             self._save_game()
         if event.type == pygame.KEYDOWN and event.key == pygame.K_l:
@@ -311,16 +355,21 @@ class OverworldScene:
                     if self.active_npc.is_trainer():
                         # Start trainer battle
                         from .battle_scene import BattleScene
+
                         # Create trainer party states and hydrate to Mascot objects
-                        trainer_party_states = self._initialize_party(self.active_npc.party)
+                        trainer_party_states = self._initialize_party(
+                            self.active_npc.party
+                        )
                         bs = BattleScene(self.manager)
-                        trainer_party = [bs.hydrate_mascot(state) for state in trainer_party_states]
+                        trainer_party = [
+                            bs.hydrate_mascot(state) for state in trainer_party_states
+                        ]
                         battle = BattleScene(
                             self.manager,
                             party_states=self.party,
                             inventory=self.inventory,
                             opponent_party=trainer_party,
-                            is_trainer_battle=True
+                            is_trainer_battle=True,
                         )
                         self.manager.push(battle)
                         # Mark trainer as defeated (will be set when returning from battle)
@@ -331,7 +380,10 @@ class OverworldScene:
             else:
                 # Try to interact with NPC
                 for npc in self.npcs:
-                    if abs(self.player.x // TILE_SIZE - npc.x) <= 1 and abs(self.player.y // TILE_SIZE - npc.y) <= 1:
+                    if (
+                        abs(self.player.x // TILE_SIZE - npc.x) <= 1
+                        and abs(self.player.y // TILE_SIZE - npc.y) <= 1
+                    ):
                         self.active_npc = npc
                         self.active_dialogue = npc.talk()
                         break
@@ -352,8 +404,8 @@ class OverworldScene:
             self.is_paused = False
         elif selected_option == "Quit":
             from .scenes import TitleScene
-            self.manager.scenes = [TitleScene(self.manager)]
 
+            self.manager.scenes = [TitleScene(self.manager)]
 
     def update(self, dt):
         if self.is_paused:
@@ -363,7 +415,7 @@ class OverworldScene:
             self.notification_timer -= dt
             if self.notification_timer <= 0:
                 self.notification_text = None
-            
+
         # Sync party HP from last battle
         battle_states = getattr(self.manager, "last_battle_party_states", None)
         if battle_states:
@@ -383,6 +435,7 @@ class OverworldScene:
             if not any(state["name"] == captured_name for state in self.party):
                 # Create fresh state with full HP
                 from .battle_scene import BattleScene
+
                 bs = BattleScene(self.manager)
                 self.party.append(bs.make_mascot_state(captured_name))
             # Clear the flag so we don't add it again
@@ -406,19 +459,39 @@ class OverworldScene:
             self.player.move(dx, dy, self.tilemap)
         # Count steps only in tall grass
         tx, ty = int(self.player.x // TILE_SIZE), int(self.player.y // TILE_SIZE)
-        in_grass = (0 <= tx < self.tilemap.width and 0 <= ty < self.tilemap.height and self.tilemap.tiles[ty][tx] == 2)
+        in_grass = (
+            0 <= tx < self.tilemap.width
+            and 0 <= ty < self.tilemap.height
+            and self.tilemap.tiles[ty][tx] == 2
+        )
         if (self.player.x, self.player.y) != prev_pos and in_grass:
             self.steps += 1
             if self.steps >= self.encounter_steps:
                 from .battle_scene import BattleScene
+
                 # Pass party states to battle
-                self.manager.push(BattleScene(self.manager, party_states=self.party, inventory=self.inventory))
+                self.manager.push(
+                    BattleScene(
+                        self.manager, party_states=self.party, inventory=self.inventory
+                    )
+                )
                 self.steps = 0
                 self.encounter_steps = random.randint(10, 20)
 
         # Camera follows player
-        self.camera_x = max(0, min(self.player.x - SCREEN_WIDTH // 2, MAP_WIDTH * TILE_SIZE - SCREEN_WIDTH))
-        self.camera_y = max(0, min(self.player.y - SCREEN_HEIGHT // 2, MAP_HEIGHT * TILE_SIZE - SCREEN_HEIGHT))
+        self.camera_x = max(
+            0,
+            min(
+                self.player.x - SCREEN_WIDTH // 2, MAP_WIDTH * TILE_SIZE - SCREEN_WIDTH
+            ),
+        )
+        self.camera_y = max(
+            0,
+            min(
+                self.player.y - SCREEN_HEIGHT // 2,
+                MAP_HEIGHT * TILE_SIZE - SCREEN_HEIGHT,
+            ),
+        )
 
     def draw(self, surface):
         self.tilemap.draw(surface, self.camera_x, self.camera_y, self.tile_images)
@@ -427,7 +500,12 @@ class OverworldScene:
         for npc in self.npcs:
             px = npc.x * TILE_SIZE - self.camera_x
             py = npc.y * TILE_SIZE - self.camera_y
-            pygame.draw.circle(surface, GB_PALETTE[2], (px + TILE_SIZE // 2, py + TILE_SIZE // 2), TILE_SIZE // 2)
+            pygame.draw.circle(
+                surface,
+                GB_PALETTE[2],
+                (px + TILE_SIZE // 2, py + TILE_SIZE // 2),
+                TILE_SIZE // 2,
+            )
         # Draw dialogue box if active
         if self.active_dialogue:
             font = pygame.font.SysFont("Arial", 12, bold=True)
@@ -446,12 +524,19 @@ class OverworldScene:
             if current:
                 lines.append(current)
             box_h = 20 + 16 * len(lines)
-            pygame.draw.rect(surface, GB_PALETTE[1], (20, SCREEN_HEIGHT - box_h - 10, box_w, box_h))
-            pygame.draw.rect(surface, GB_PALETTE[3], (20, SCREEN_HEIGHT - box_h - 10, box_w, box_h), 1)
+            pygame.draw.rect(
+                surface, GB_PALETTE[1], (20, SCREEN_HEIGHT - box_h - 10, box_w, box_h)
+            )
+            pygame.draw.rect(
+                surface,
+                GB_PALETTE[3],
+                (20, SCREEN_HEIGHT - box_h - 10, box_w, box_h),
+                1,
+            )
             for i, line in enumerate(lines):
                 text = font.render(line, True, GB_PALETTE[3])
                 surface.blit(text, (30, SCREEN_HEIGHT - box_h + 8 + i * 16))
-        
+
         self.draw_hud(surface)
         self.draw_control_hints(surface)
         self.draw_notification(surface)

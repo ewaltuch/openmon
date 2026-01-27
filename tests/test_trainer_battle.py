@@ -1,6 +1,7 @@
 """
 Test trainer battle functionality.
 """
+
 import pygame
 from src.engine.scene_manager import SceneManager
 from src.engine.battle_scene import BattleScene
@@ -11,7 +12,7 @@ from src.engine.npc import NPC
 def test_trainer_battle_init():
     """Test that trainer battles initialize correctly."""
     pygame.init()
-    screen = pygame.display.set_mode((240, 160))
+    _screen = pygame.display.set_mode((240, 160))
     manager = SceneManager()
 
     player_party = [
@@ -23,7 +24,7 @@ def test_trainer_battle_init():
             "defense": 6,
             "spd": 7,
             "type": "Kernel",
-            "fainted": False
+            "fainted": False,
         }
     ]
 
@@ -36,7 +37,7 @@ def test_trainer_battle_init():
             "defense": 7,
             "spd": 5,
             "type": "Shell",
-            "fainted": False
+            "fainted": False,
         }
     ]
 
@@ -44,7 +45,6 @@ def test_trainer_battle_init():
     inventory.add_item("package", 5)
 
     # Create battle scene with opponent party
-    from src.engine.battle_scene import BattleScene
     bs = BattleScene(manager)
     opponent_party = [bs.hydrate_mascot(state) for state in opponent_party_states]
 
@@ -53,7 +53,7 @@ def test_trainer_battle_init():
         party_states=player_party,
         inventory=inventory,
         opponent_party=opponent_party,
-        is_trainer_battle=True
+        is_trainer_battle=True,
     )
 
     # Verify trainer battle setup
@@ -68,7 +68,7 @@ def test_trainer_battle_init():
 def test_trainer_battle_no_capture():
     """Test that you cannot capture in trainer battles."""
     pygame.init()
-    screen = pygame.display.set_mode((240, 160))
+    _screen = pygame.display.set_mode((240, 160))
     manager = SceneManager()
 
     player_party = [
@@ -80,7 +80,7 @@ def test_trainer_battle_no_capture():
             "defense": 6,
             "spd": 7,
             "type": "Kernel",
-            "fainted": False
+            "fainted": False,
         }
     ]
 
@@ -93,7 +93,7 @@ def test_trainer_battle_no_capture():
             "defense": 7,
             "spd": 5,
             "type": "Shell",
-            "fainted": False
+            "fainted": False,
         }
     ]
 
@@ -101,7 +101,6 @@ def test_trainer_battle_no_capture():
     inventory.add_item("package", 5)
 
     # Create trainer battle
-    from src.engine.battle_scene import BattleScene
     bs = BattleScene(manager)
     opponent_party = [bs.hydrate_mascot(state) for state in opponent_party_states]
 
@@ -110,7 +109,7 @@ def test_trainer_battle_no_capture():
         party_states=player_party,
         inventory=inventory,
         opponent_party=opponent_party,
-        is_trainer_battle=True
+        is_trainer_battle=True,
     )
 
     # Try to capture
@@ -119,7 +118,9 @@ def test_trainer_battle_no_capture():
 
     # Verify capture was blocked
     assert battle.msg == "You can't capture a trainer's mascot!"
-    assert inventory.get_item_count("package") == initial_packages  # No package consumed
+    assert (
+        inventory.get_item_count("package") == initial_packages
+    )  # No package consumed
     assert battle.captured is False
 
     pygame.quit()
@@ -128,14 +129,7 @@ def test_trainer_battle_no_capture():
 def test_npc_trainer_flag():
     """Test that NPC trainer flag works correctly."""
     # Regular NPC
-    npc1 = NPC(
-        id="npc1",
-        name="Linus",
-        x=5,
-        y=8,
-        sprite="tux",
-        dialogue=["Hello!"]
-    )
+    npc1 = NPC(id="npc1", name="Linus", x=5, y=8, sprite="tux", dialogue=["Hello!"])
     assert npc1.is_trainer() is False
 
     # Trainer NPC (not defeated)
@@ -147,7 +141,7 @@ def test_npc_trainer_flag():
         sprite="trainer",
         dialogue=["Let's battle!"],
         trainer=True,
-        party=["BSD Daemon", "Tux"]
+        party=["BSD Daemon", "Tux"],
     )
     assert trainer1.is_trainer() is True
 
@@ -161,7 +155,7 @@ def test_npc_trainer_flag():
         dialogue=["Good battle!"],
         trainer=True,
         party=["Octocat"],
-        defeated=True
+        defeated=True,
     )
     assert trainer2.is_trainer() is False  # Already defeated
 
@@ -169,7 +163,7 @@ def test_npc_trainer_flag():
 def test_trainer_battle_no_flee():
     """Test that you cannot flee from trainer battles."""
     pygame.init()
-    screen = pygame.display.set_mode((240, 160))
+    _screen = pygame.display.set_mode((240, 160))
     manager = SceneManager()
 
     player_party = [
@@ -181,7 +175,7 @@ def test_trainer_battle_no_flee():
             "defense": 6,
             "spd": 7,
             "type": "Kernel",
-            "fainted": False
+            "fainted": False,
         }
     ]
 
@@ -194,14 +188,13 @@ def test_trainer_battle_no_flee():
             "defense": 7,
             "spd": 5,
             "type": "Shell",
-            "fainted": False
+            "fainted": False,
         }
     ]
 
     inventory = InventoryManager()
 
     # Create trainer battle
-    from src.engine.battle_scene import BattleScene
     bs = BattleScene(manager)
     opponent_party = [bs.hydrate_mascot(state) for state in opponent_party_states]
 
@@ -210,7 +203,7 @@ def test_trainer_battle_no_flee():
         party_states=player_party,
         inventory=inventory,
         opponent_party=opponent_party,
-        is_trainer_battle=True
+        is_trainer_battle=True,
     )
 
     # Try to select flee option (menu index 2)
@@ -241,7 +234,7 @@ def test_trainer_defeated_dialogue():
         defeated_dialogue=["You're really strong!", "I need to train more..."],
         trainer=True,
         party=["BSD Daemon", "Tux"],
-        defeated=False
+        defeated=False,
     )
 
     # Before defeat - should show regular dialogue

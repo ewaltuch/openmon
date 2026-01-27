@@ -1,6 +1,8 @@
 """
 Scene manager for Open-Mon. Handles scene stack and transitions.
 """
+
+
 class SceneManager:
     def __init__(self):
         self.scenes = []

@@ -1,13 +1,15 @@
-import pytest
 import pygame
 from src.engine.overworld_scene import OverworldScene
+
 
 class DummyManager:
     def __init__(self):
         self.scenes = []
         self.captured_mascot_name = None
+
     def push(self, scene):
         self.scenes.append(scene)
+
 
 def test_party_adds_captured():
     mgr = DummyManager()
@@ -17,12 +19,14 @@ def test_party_adds_captured():
     # Party is now a list of state dicts, check for name
     assert any(state["name"] == "Octocat" for state in scene.party)
 
+
 def test_party_initial():
     mgr = DummyManager()
     scene = OverworldScene(mgr)
     # Party is now a list of state dicts, check for names
     assert any(state["name"] == "Tux" for state in scene.party)
     assert any(state["name"] == "BSD Daemon" for state in scene.party)
+
 
 def test_encounter_only_in_grass():
     mgr = DummyManager()
@@ -32,10 +36,12 @@ def test_encounter_only_in_grass():
     scene.player.y = 2 * 8
     scene.steps = scene.encounter_steps - 1
     prev_scenes = len(mgr.scenes)
+
     # Patch pygame.key.get_pressed to simulate movement
     class FakeKeys:
         def __getitem__(self, key):
             return key == pygame.K_RIGHT
+
     orig_get_pressed = pygame.key.get_pressed
     pygame.key.get_pressed = lambda: FakeKeys()
     scene.update(0.1)

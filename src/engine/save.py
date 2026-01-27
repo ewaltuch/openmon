@@ -1,9 +1,11 @@
 """
 Save/load system for Open-Mon. Serializes party, inventory, position to JSON.
 """
+
 import os
 import json
 from src.constants import SAVE_PATH
+
 
 class SaveManager:
     @staticmethod

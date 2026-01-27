@@ -1,7 +1,9 @@
 """
 Abstract sprite and animation helper for Open-Mon.
 """
+
 import pygame
+
 
 class AnimatedSprite(pygame.sprite.Sprite):
     def __init__(self, images, pos, frame_duration=0.1):

@@ -1,7 +1,11 @@
 """
 Scene definitions for Open-Mon: Title, Overworld, Battle, Credits.
 """
+
 import pygame
+
+from src.constants import GB_PALETTE
+
 
 class Scene:
     def __init__(self, manager):
@@ -16,12 +20,12 @@ class Scene:
     def draw(self, surface):
         pass
 
-from src.constants import GB_PALETTE
 
 class TitleScene(Scene):
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
             from .overworld_scene import OverworldScene
+
             self.manager.push(OverworldScene(self.manager))
 
     def draw(self, surface):
@@ -32,9 +36,6 @@ class TitleScene(Scene):
         subtitle = font.render("Press any key...", True, GB_PALETTE[2])
         surface.blit(subtitle, (16, 90))
 
-from .overworld_scene import OverworldScene
-
-from .battle_scene import BattleScene
 
 class CreditsScene(Scene):
     pass

@@ -1,15 +1,17 @@
 """
 Test that party selection UI can display multiple mascots.
 """
+
 import pygame
 from src.engine.scene_manager import SceneManager
 from src.engine.battle_scene import BattleScene
 from src.engine.inventory import InventoryManager
 
+
 def test_large_party_display():
     """Test that we can display a party with multiple mascots."""
     pygame.init()
-    screen = pygame.display.set_mode((240, 160))
+    _screen = pygame.display.set_mode((240, 160))
     manager = SceneManager()
 
     # Create party with 4 mascots (Tux, BSD Daemon, and 2 Octocats)
@@ -22,7 +24,7 @@ def test_large_party_display():
             "defense": 6,
             "spd": 7,
             "type": "Kernel",
-            "fainted": False
+            "fainted": False,
         },
         {
             "name": "BSD Daemon",
@@ -32,7 +34,7 @@ def test_large_party_display():
             "defense": 7,
             "spd": 5,
             "type": "Shell",
-            "fainted": False
+            "fainted": False,
         },
         {
             "name": "Octocat",
@@ -42,7 +44,7 @@ def test_large_party_display():
             "defense": 5,
             "spd": 6,
             "type": "Browser",
-            "fainted": False
+            "fainted": False,
         },
         {
             "name": "Octocat",  # Second one captured
@@ -52,8 +54,8 @@ def test_large_party_display():
             "defense": 5,
             "spd": 6,
             "type": "Browser",
-            "fainted": False
-        }
+            "fainted": False,
+        },
     ]
 
     inventory = InventoryManager()
@@ -78,7 +80,9 @@ def test_large_party_display():
     total_height = menu_y + menu_height
 
     # Verify menu fits on screen (160px height)
-    assert total_height <= 160, f"Party menu extends beyond screen: {total_height}px > 160px"
+    assert (
+        total_height <= 160
+    ), f"Party menu extends beyond screen: {total_height}px > 160px"
     assert len(battle.party) == 4, "Battle should have 4 party members"
 
     pygame.quit()

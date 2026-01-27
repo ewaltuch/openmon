@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch
 from src.engine.battle_scene import BattleScene
 from src.engine.save import SaveManager
@@ -95,7 +94,7 @@ def test_healing_item_persists():
         "atk": 8,
         "defense": 6,
         "spd": 7,
-        "type": "Kernel"
+        "type": "Kernel",
     }
     battle = BattleScene(manager, party_states=[state], inventory=inventory)
 
@@ -119,7 +118,7 @@ def test_captured_mascot_full_hp():
     battle = BattleScene(manager, inventory=inventory)
     battle.opponent.hp = 1  # Make capture likely
 
-    with patch('src.engine.battle_scene.random.random', return_value=0.1):
+    with patch("src.engine.battle_scene.random.random", return_value=0.1):
         battle._try_capture()
 
     # Check captured mascot has full HP in party states
@@ -129,7 +128,7 @@ def test_captured_mascot_full_hp():
 
 def test_save_load_hp_persistence(tmp_path, monkeypatch):
     """Test that HP persists through save/load cycle."""
-    monkeypatch.setattr('src.constants.SAVE_PATH', str(tmp_path / "save1.json"))
+    monkeypatch.setattr("src.constants.SAVE_PATH", str(tmp_path / "save1.json"))
 
     # Create save with damaged mascot
     state = {
@@ -142,7 +141,7 @@ def test_save_load_hp_persistence(tmp_path, monkeypatch):
                 "atk": 8,
                 "defense": 6,
                 "spd": 7,
-                "type": "Kernel"
+                "type": "Kernel",
             },
             {
                 "name": "BSD Daemon",
@@ -151,10 +150,10 @@ def test_save_load_hp_persistence(tmp_path, monkeypatch):
                 "atk": 7,
                 "defense": 7,
                 "spd": 5,
-                "type": "Shell"
-            }
+                "type": "Shell",
+            },
         ],
-        "inventory": {"items": {}}
+        "inventory": {"items": {}},
     }
 
     SaveManager.save(state)
@@ -179,7 +178,7 @@ def test_party_switching_preserves_hp():
             "atk": 8,
             "defense": 6,
             "spd": 7,
-            "type": "Kernel"
+            "type": "Kernel",
         },
         {
             "name": "BSD Daemon",
@@ -188,8 +187,8 @@ def test_party_switching_preserves_hp():
             "atk": 7,
             "defense": 7,
             "spd": 5,
-            "type": "Shell"
-        }
+            "type": "Shell",
+        },
     ]
 
     battle = BattleScene(manager, party_states=states)

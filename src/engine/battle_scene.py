@@ -8,6 +8,7 @@ from src.constants import GB_PALETTE, SCREEN_WIDTH, SCREEN_HEIGHT
 from PIL import Image, ImageDraw
 import os
 
+
 class Mascot:
     def __init__(self, name, hp, atk, defense, spd, sprite, moves, type_):
         self.name = name
@@ -20,12 +21,14 @@ class Mascot:
         self.moves = moves
         self.type = type_
 
+
 class Move:
 
     def __init__(self, name, power, type_):
         self.name = name
         self.power = power
         self.type = type_
+
 
 ELEMENT_TYPES = ["Kernel", "Shell", "Browser", "Editor"]
 
@@ -50,7 +53,14 @@ class BattleScene:
     STATE_PARTY_SELECT = "party_select"
     STATE_MESSAGE = "message"
 
-    def __init__(self, manager, party_states=None, inventory=None, opponent_party=None, is_trainer_battle=False):
+    def __init__(
+        self,
+        manager,
+        party_states=None,
+        inventory=None,
+        opponent_party=None,
+        is_trainer_battle=False,
+    ):
         self.manager = manager
         self.is_trainer_battle = is_trainer_battle
 
@@ -58,7 +68,7 @@ class BattleScene:
         if party_states is None:
             party_states = [
                 self.make_mascot_state("Tux"),
-                self.make_mascot_state("BSD Daemon")
+                self.make_mascot_state("BSD Daemon"),
             ]
 
         # Store party states for syncing later (ensure fainted field exists)
@@ -112,13 +122,18 @@ class BattleScene:
     def make_mascot(self, name):
         if name == "Tux":
             return Mascot(
-                "Tux", 24, 8, 6, 7, self._generate_tux_sprite(),
+                "Tux",
+                24,
+                8,
+                6,
+                7,
+                self._generate_tux_sprite(),
                 [
                     Move("Peck", 6, "Kernel"),
                     Move("Code", 8, "Editor"),
                     Move("Shellshock", 10, "Shell"),
                 ],
-                "Kernel"
+                "Kernel",
             )
         elif name == "BSD Daemon":
             img = Image.new("RGB", (32, 32), GB_PALETTE[0])
@@ -126,27 +141,44 @@ class BattleScene:
             draw.ellipse([8, 8, 24, 24], fill=GB_PALETTE[2])
             draw.rectangle([12, 24, 20, 28], fill=GB_PALETTE[1])
             return Mascot(
-                "BSD Daemon", 22, 7, 7, 5, pygame.image.fromstring(img.tobytes(), img.size, img.mode),
+                "BSD Daemon",
+                22,
+                7,
+                7,
+                5,
+                pygame.image.fromstring(img.tobytes(), img.size, img.mode),
                 [
                     Move("Fork Bomb", 7, "Shell"),
                     Move("Daemonize", 5, "Kernel"),
                     Move("Edit Conf", 8, "Editor"),
                 ],
-                "Shell"
+                "Shell",
             )
         elif name == "Octocat":
             return Mascot(
-                "Octocat", 20, 7, 5, 6, self._generate_octocat_sprite(),
+                "Octocat",
+                20,
+                7,
+                5,
+                6,
+                self._generate_octocat_sprite(),
                 [
                     Move("Fork", 7, "Shell"),
                     Move("PR", 5, "Editor"),
                     Move("Browse", 9, "Browser"),
                 ],
-                "Browser"
+                "Browser",
             )
         # Default fallback
         return Mascot(
-            name, 20, 5, 5, 5, self._generate_tux_sprite(), [Move("Peck", 5, "Kernel")], "Kernel"
+            name,
+            20,
+            5,
+            5,
+            5,
+            self._generate_tux_sprite(),
+            [Move("Peck", 5, "Kernel")],
+            "Kernel",
         )
 
     def make_mascot_state(self, name, hp=None):
@@ -173,7 +205,7 @@ class BattleScene:
             "defense": defense,
             "spd": spd,
             "type": type_,
-            "fainted": False
+            "fainted": False,
         }
 
     def hydrate_mascot(self, state):
@@ -223,7 +255,7 @@ class BattleScene:
             spd=state["spd"],
             sprite=sprite,
             moves=moves,
-            type_=state["type"]
+            type_=state["type"],
         )
         # Then override with actual current HP
         mascot.hp = state["hp"]
@@ -236,16 +268,18 @@ class BattleScene:
         """
         states = []
         for i, mascot in enumerate(self.party):
-            states.append({
-                "name": mascot.name,
-                "hp": mascot.hp,
-                "max_hp": mascot.max_hp,
-                "atk": mascot.atk,
-                "defense": mascot.defense,
-                "spd": mascot.spd,
-                "type": mascot.type,
-                "fainted": self.party_states[i].get("fainted", False)
-            })
+            states.append(
+                {
+                    "name": mascot.name,
+                    "hp": mascot.hp,
+                    "max_hp": mascot.max_hp,
+                    "atk": mascot.atk,
+                    "defense": mascot.defense,
+                    "spd": mascot.spd,
+                    "type": mascot.type,
+                    "fainted": self.party_states[i].get("fainted", False),
+                }
+            )
         return states
 
     def _generate_tux_sprite(self):
@@ -264,7 +298,11 @@ class BattleScene:
 
     def _get_available_party_indices(self):
         """Get list of indices for non-fainted party members."""
-        return [i for i in range(len(self.party)) if not self.party_states[i].get("fainted", False)]
+        return [
+            i
+            for i in range(len(self.party))
+            if not self.party_states[i].get("fainted", False)
+        ]
 
     def _check_all_fainted(self):
         """Check if all party members have fainted."""
@@ -327,7 +365,9 @@ class BattleScene:
                         else:
                             self.msg = "You fled!"
                             self.battle_over = True
-                    elif len(self.party) > 1 and self.menu_idx == self.menu_names.index("Switch"):
+                    elif len(self.party) > 1 and self.menu_idx == self.menu_names.index(
+                        "Switch"
+                    ):
                         self._switch_party()
         elif self.state == "move_select":
             if event.type == pygame.KEYDOWN:
@@ -367,15 +407,26 @@ class BattleScene:
                     return
 
                 if event.key == pygame.K_UP:
-                    current_pos = available.index(self.party_select_idx) if self.party_select_idx in available else 0
+                    current_pos = (
+                        available.index(self.party_select_idx)
+                        if self.party_select_idx in available
+                        else 0
+                    )
                     new_pos = (current_pos - 1) % len(available)
                     self.party_select_idx = available[new_pos]
                 elif event.key == pygame.K_DOWN:
-                    current_pos = available.index(self.party_select_idx) if self.party_select_idx in available else 0
+                    current_pos = (
+                        available.index(self.party_select_idx)
+                        if self.party_select_idx in available
+                        else 0
+                    )
                     new_pos = (current_pos + 1) % len(available)
                     self.party_select_idx = available[new_pos]
                 elif event.key in (pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER):
-                    if self.party_select_idx in available and self.party_select_idx != self.active_idx:
+                    if (
+                        self.party_select_idx in available
+                        and self.party_select_idx != self.active_idx
+                    ):
                         self._execute_switch(self.party_select_idx)
                         # If not forced, opponent gets a free attack
                         if not self.forced_switch:
@@ -390,7 +441,9 @@ class BattleScene:
         """Open party selection menu for voluntary switching."""
         if len(self.party) > 1:
             available = self._get_available_party_indices()
-            if len(available) > 1 or (len(available) == 1 and available[0] != self.active_idx):
+            if len(available) > 1 or (
+                len(available) == 1 and available[0] != self.active_idx
+            ):
                 # Find first available mascot that's not active
                 for idx in available:
                     if idx != self.active_idx:
@@ -409,7 +462,9 @@ class BattleScene:
 
         move = self.player.moves[move_idx]
         multiplier = TYPE_EFFECTIVENESS.get((move.type, self.opponent.type), 1.0)
-        dmg = max(1, int((move.power + self.player.atk - self.opponent.defense) * multiplier))
+        dmg = max(
+            1, int((move.power + self.player.atk - self.opponent.defense) * multiplier)
+        )
         self.opponent.hp -= dmg
         if multiplier > 1.0:
             self.eff_msg = "Super effective!"
@@ -429,7 +484,9 @@ class BattleScene:
     def _opponent_attack(self):
         move = random.choice(self.opponent.moves)
         multiplier = TYPE_EFFECTIVENESS.get((move.type, self.player.type), 1.0)
-        dmg = max(1, int((move.power + self.opponent.atk - self.player.defense) * multiplier))
+        dmg = max(
+            1, int((move.power + self.opponent.atk - self.player.defense) * multiplier)
+        )
         self.player.hp -= dmg
         if multiplier > 1.0:
             self.eff_msg = "Super effective!"
@@ -483,7 +540,9 @@ class BattleScene:
                 if "heal" in item.effect:
                     self.msg = f"Used {item.name} on {self.player.name}! Restored HP."
                 elif "full_heal" in item.effect:
-                    self.msg = f"Used {item.name} on {self.player.name}! Fully restored HP."
+                    self.msg = (
+                        f"Used {item.name} on {self.player.name}! Fully restored HP."
+                    )
                 elif "revive" in item.effect:
                     self.msg = f"Used {item.name} on {self.player.name}! Revived!"
                 self._opponent_attack()
@@ -543,7 +602,9 @@ class BattleScene:
 
     def draw(self, surface):
         # Use a pixel font for crisp text if available, else fallback
-        font_path = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf")
+        font_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf"
+        )
         menu_font_size = 12
         msg_font_size = 12
         eff_font_size = 14
@@ -561,19 +622,35 @@ class BattleScene:
         surface.blit(self.player.sprite, (16, 64))
         surface.blit(self.opponent.sprite, (112, 16))
         # Player Mascot Info
-        player_name_text = menu_font.render(f"{self.player.name} [{self.player.type}]", True, GB_PALETTE[3])
+        player_name_text = menu_font.render(
+            f"{self.player.name} [{self.player.type}]", True, GB_PALETTE[3]
+        )
         surface.blit(player_name_text, (16, 40))
         pygame.draw.rect(surface, GB_PALETTE[3], (16, 56, 60, 6))
-        pygame.draw.rect(surface, GB_PALETTE[1], (16, 56, int(60 * self.player.hp / self.player.max_hp), 6))
-        player_hp_text = menu_font.render(f"{self.player.hp}/{self.player.max_hp}", True, GB_PALETTE[3])
+        pygame.draw.rect(
+            surface,
+            GB_PALETTE[1],
+            (16, 56, int(60 * self.player.hp / self.player.max_hp), 6),
+        )
+        player_hp_text = menu_font.render(
+            f"{self.player.hp}/{self.player.max_hp}", True, GB_PALETTE[3]
+        )
         surface.blit(player_hp_text, (80, 52))
 
         # Opponent Mascot Info
-        opponent_name_text = menu_font.render(f"{self.opponent.name} [{self.opponent.type}]", True, GB_PALETTE[3])
+        opponent_name_text = menu_font.render(
+            f"{self.opponent.name} [{self.opponent.type}]", True, GB_PALETTE[3]
+        )
         surface.blit(opponent_name_text, (112, 0))
         pygame.draw.rect(surface, GB_PALETTE[3], (112, 18, 60, 6))
-        pygame.draw.rect(surface, GB_PALETTE[2], (112, 18, int(60 * self.opponent.hp / self.opponent.max_hp), 6))
-        opponent_hp_text = menu_font.render(f"{self.opponent.hp}/{self.opponent.max_hp}", True, GB_PALETTE[3])
+        pygame.draw.rect(
+            surface,
+            GB_PALETTE[2],
+            (112, 18, int(60 * self.opponent.hp / self.opponent.max_hp), 6),
+        )
+        opponent_hp_text = menu_font.render(
+            f"{self.opponent.hp}/{self.opponent.max_hp}", True, GB_PALETTE[3]
+        )
         surface.blit(opponent_hp_text, (176, 14))
 
         if self.eff_msg:
@@ -584,7 +661,9 @@ class BattleScene:
                 color = GB_PALETTE[2]  # Dark gray
 
             eff_text_surf = eff_font.render(self.eff_msg, True, color)
-            eff_text_rect = eff_text_surf.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 70))
+            eff_text_rect = eff_text_surf.get_rect(
+                center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 70)
+            )
 
             # Create a small box for the message
             box_rect = eff_text_rect.inflate(20, 10)
@@ -604,9 +683,15 @@ class BattleScene:
                 switch_name = None
             menu_lines = len(vert_names)
             msg_lines = len(self.msg.split("\n"))
-            window_height = 4 + max(menu_lines, msg_lines) * 14 + 4 + (18 if switch_name else 0)
-            pygame.draw.rect(surface, GB_PALETTE[1], (0, window_y, SCREEN_WIDTH, window_height))
-            pygame.draw.rect(surface, GB_PALETTE[3], (0, window_y, SCREEN_WIDTH, window_height), 1)
+            window_height = (
+                4 + max(menu_lines, msg_lines) * 14 + 4 + (18 if switch_name else 0)
+            )
+            pygame.draw.rect(
+                surface, GB_PALETTE[1], (0, window_y, SCREEN_WIDTH, window_height)
+            )
+            pygame.draw.rect(
+                surface, GB_PALETTE[3], (0, window_y, SCREEN_WIDTH, window_height), 1
+            )
             for i, name in enumerate(vert_names):
                 color = GB_PALETTE[3] if self.menu_idx == i else GB_PALETTE[2]
                 text = menu_font.render(name, True, color)
@@ -619,24 +704,37 @@ class BattleScene:
             msg_lines = self.msg.split("\n")
             for i, line in enumerate(msg_lines):
                 text = msg_font.render(line, True, GB_PALETTE[3])
-                surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, window_y + 4 + i * 14))
+                surface.blit(
+                    text,
+                    (SCREEN_WIDTH // 2 - text.get_width() // 2, window_y + 4 + i * 14),
+                )
         elif self.state == "move_select":
             moves = self.player.moves
             window_height = 4 + len(moves) * 14 + 4
-            pygame.draw.rect(surface, GB_PALETTE[1], (0, window_y, SCREEN_WIDTH, window_height))
-            pygame.draw.rect(surface, GB_PALETTE[3], (0, window_y, SCREEN_WIDTH, window_height), 1)
+            pygame.draw.rect(
+                surface, GB_PALETTE[1], (0, window_y, SCREEN_WIDTH, window_height)
+            )
+            pygame.draw.rect(
+                surface, GB_PALETTE[3], (0, window_y, SCREEN_WIDTH, window_height), 1
+            )
             for i, move in enumerate(moves):
                 color = GB_PALETTE[3] if self.move_idx == i else GB_PALETTE[2]
                 move_text = f"{move.name:<10} {move.power:>2} PWR [{move.type}]"
                 text = menu_font.render(move_text, True, color)
                 surface.blit(text, (8, window_y + 4 + i * 14))
-            text = msg_font.render("Choose a move (Z/Enter to confirm, X to cancel)", True, GB_PALETTE[3])
+            text = msg_font.render(
+                "Choose a move (Z/Enter to confirm, X to cancel)", True, GB_PALETTE[3]
+            )
             surface.blit(text, (8, window_y + 4 + len(moves) * 14))
         elif self.state == "item_select":
             items = self.inventory.get_all_items() if self.inventory else []
             window_height = 4 + max(1, len(items)) * 14 + 18
-            pygame.draw.rect(surface, GB_PALETTE[1], (0, window_y, SCREEN_WIDTH, window_height))
-            pygame.draw.rect(surface, GB_PALETTE[3], (0, window_y, SCREEN_WIDTH, window_height), 1)
+            pygame.draw.rect(
+                surface, GB_PALETTE[1], (0, window_y, SCREEN_WIDTH, window_height)
+            )
+            pygame.draw.rect(
+                surface, GB_PALETTE[3], (0, window_y, SCREEN_WIDTH, window_height), 1
+            )
             if items:
                 for i, (item, quantity) in enumerate(items):
                     color = GB_PALETTE[3] if self.item_idx == i else GB_PALETTE[2]
@@ -645,7 +743,9 @@ class BattleScene:
             else:
                 text = menu_font.render("No items!", True, GB_PALETTE[3])
                 surface.blit(text, (8, window_y + 4))
-            text = msg_font.render("Choose an item (Z/Enter to use, X to cancel)", True, GB_PALETTE[3])
+            text = msg_font.render(
+                "Choose an item (Z/Enter to use, X to cancel)", True, GB_PALETTE[3]
+            )
             surface.blit(text, (8, window_y + 4 + max(1, len(items)) * 14))
         elif self.state == self.STATE_PARTY_SELECT:
             # Draw party selection menu - Pokemon Red/Blue style full-screen overlay
@@ -666,11 +766,17 @@ class BattleScene:
             header_height = 18
             footer_height = 14
             party_list_height = len(self.party) * menu_item_height
-            menu_height = header_height + party_list_height + footer_height + menu_padding * 2
+            menu_height = (
+                header_height + party_list_height + footer_height + menu_padding * 2
+            )
 
             # Draw main menu box
-            pygame.draw.rect(surface, GB_PALETTE[1], (menu_x, menu_y, menu_width, menu_height))
-            pygame.draw.rect(surface, GB_PALETTE[3], (menu_x, menu_y, menu_width, menu_height), 2)
+            pygame.draw.rect(
+                surface, GB_PALETTE[1], (menu_x, menu_y, menu_width, menu_height)
+            )
+            pygame.draw.rect(
+                surface, GB_PALETTE[3], (menu_x, menu_y, menu_width, menu_height), 2
+            )
 
             # Draw prompt/header
             text = msg_font.render(prompt, True, GB_PALETTE[3])
@@ -681,8 +787,8 @@ class BattleScene:
             for i, mascot in enumerate(self.party):
                 y_offset = list_start_y + i * menu_item_height
                 is_fainted = self.party_states[i].get("fainted", False)
-                is_active = (i == self.active_idx)
-                is_selected = (i == self.party_select_idx)
+                is_active = i == self.active_idx
+                is_selected = i == self.party_select_idx
 
                 # Determine color based on state
                 if is_fainted:
@@ -705,7 +811,9 @@ class BattleScene:
 
                 # Draw name (shortened to fit better)
                 name_x = menu_x + menu_padding + 12
-                name_text = menu_font.render(mascot.name[:12], True, color)  # Truncate long names
+                name_text = menu_font.render(
+                    mascot.name[:12], True, color
+                )  # Truncate long names
                 surface.blit(name_text, (name_x, y_offset))
 
                 # Draw HP bar or status
@@ -721,13 +829,23 @@ class BattleScene:
                     hp_width = int(bar_width * hp_ratio)
 
                     # HP bar background
-                    pygame.draw.rect(surface, GB_PALETTE[3], (bar_x, y_offset + 4, bar_width, bar_height))
+                    pygame.draw.rect(
+                        surface,
+                        GB_PALETTE[3],
+                        (bar_x, y_offset + 4, bar_width, bar_height),
+                    )
                     # HP bar fill
                     if hp_width > 0:
-                        pygame.draw.rect(surface, GB_PALETTE[1], (bar_x, y_offset + 4, hp_width, bar_height))
+                        pygame.draw.rect(
+                            surface,
+                            GB_PALETTE[1],
+                            (bar_x, y_offset + 4, hp_width, bar_height),
+                        )
 
                     # HP text
-                    hp_text = menu_font.render(f"{mascot.hp}/{mascot.max_hp}", True, color)
+                    hp_text = menu_font.render(
+                        f"{mascot.hp}/{mascot.max_hp}", True, color
+                    )
                     surface.blit(hp_text, (bar_x + bar_width + 4, y_offset))
 
             # Draw controls hint at bottom
@@ -739,8 +857,15 @@ class BattleScene:
         else:
             msg_lines = self.msg.split("\n")
             window_height = 4 + len(msg_lines) * 14 + 4
-            pygame.draw.rect(surface, GB_PALETTE[1], (0, window_y, SCREEN_WIDTH, window_height))
-            pygame.draw.rect(surface, GB_PALETTE[3], (0, window_y, SCREEN_WIDTH, window_height), 1)
+            pygame.draw.rect(
+                surface, GB_PALETTE[1], (0, window_y, SCREEN_WIDTH, window_height)
+            )
+            pygame.draw.rect(
+                surface, GB_PALETTE[3], (0, window_y, SCREEN_WIDTH, window_height), 1
+            )
             for i, line in enumerate(msg_lines):
                 text = msg_font.render(line, True, GB_PALETTE[3])
-                surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, window_y + 4 + i * 14))
+                surface.blit(
+                    text,
+                    (SCREEN_WIDTH // 2 - text.get_width() // 2, window_y + 4 + i * 14),
+                )
