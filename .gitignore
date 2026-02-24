@@ -60,4 +60,4 @@ CLAUDE.md
 # Assets
 assets/sfx/
 assets/music/
-assets/sprites/
+assets/sprites/*.png
