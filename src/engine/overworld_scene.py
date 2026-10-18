@@ -9,24 +9,28 @@ import pygame
 from PIL import Image, ImageDraw
 
 from src.constants import GB_PALETTE, SCREEN_HEIGHT, SCREEN_WIDTH, SPRITE_DIR
-from src.overworld import TILE_SIZE, Player, TileMap
+from src.overworld import GRASS, KEY_DIRECTIONS, TILE_SIZE, Player, TileMap
 
 from . import mascots
 from .fonts import get_font, wrap_text
 from .save import SaveManager
 
+INTERACT_KEYS = (pygame.K_SPACE, pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER)
+
 
 class OverworldScene:
-    def npc_collides(self, x, y):
-        # Check if player's bounding box overlaps any NPC tile
-        player_rect = pygame.Rect(x, y, TILE_SIZE, TILE_SIZE)
+    SPAWN_TILE = (2, 2)
+
+    def npc_at(self, tx, ty):
+        """The NPC standing on tile (tx, ty), if any."""
         for npc in self.npcs:
-            npc_rect = pygame.Rect(
-                npc.x * TILE_SIZE, npc.y * TILE_SIZE, TILE_SIZE, TILE_SIZE
-            )
-            if player_rect.colliderect(npc_rect):
-                return True
-        return False
+            if (npc.x, npc.y) == (tx, ty):
+                return npc
+        return None
+
+    def npc_collides(self, x, y):
+        # Check if the tile at pixel (x, y) is occupied by an NPC
+        return self.npc_at(int(x // TILE_SIZE), int(y // TILE_SIZE)) is not None
 
     def __init__(self, manager, inventory=None):
         self.manager = manager
@@ -34,8 +38,9 @@ class OverworldScene:
         self.tilemap = TileMap(os.path.join(SPRITE_DIR, "tiles.csv"))
         # Initialize party as state dictionaries
         self.party = self._initialize_party(["Tux", "BSD Daemon"])
+        sx, sy = self.SPAWN_TILE
         self.player = Player(
-            2 * TILE_SIZE, 2 * TILE_SIZE, [self._generate_player_sprite()]
+            sx * TILE_SIZE, sy * TILE_SIZE, [self._generate_player_sprite()]
         )
         self.camera_x = 0
         self.camera_y = 0
@@ -223,9 +228,12 @@ class OverworldScene:
         """Load game state with notification."""
         data = SaveManager.load()
         if data:
-            self.player.x = data["player"]["x"]
-            self.player.y = data["player"]["y"]
-            self.player.rect.topleft = (self.player.x, self.player.y)
+            # Snap to the grid (older saves stored free-movement pixel positions)
+            tx = round(data["player"]["x"] / TILE_SIZE)
+            ty = round(data["player"]["y"] / TILE_SIZE)
+            if not self.tilemap.is_walkable(tx, ty) or self.npc_at(tx, ty):
+                tx, ty = self.SPAWN_TILE
+            self.player.place(tx, ty)
 
             # Load party - handle both old format (list of strings) and new format (list of dicts)
             party_data = data.get("party", ["Tux"])
@@ -282,10 +290,10 @@ class OverworldScene:
 
     def draw_control_hints(self, surface):
         """Draw the control hints at the bottom of the screen."""
-        if self.show_controls_hint:
+        if self.show_controls_hint and not self.active_dialogue:
             font = get_font(12)
 
-            hint_text = "Arrows:Move | Space:Talk | S:Save | L:Load | ESC:Menu"
+            hint_text = "Arrows:Move  Z:Talk  S:Save  L:Load  Esc:Menu"
             text_surf = font.render(hint_text, True, GB_PALETTE[3])
             text_rect = text_surf.get_rect(
                 center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 8)
@@ -318,8 +326,8 @@ class OverworldScene:
                 self._save_game()
             elif event.key == pygame.K_l:
                 self._load_game()
-        # Interact with NPCs (spacebar)
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+        # Interact with NPCs (Space/Z)
+        if event.type == pygame.KEYDOWN and event.key in INTERACT_KEYS:
             if self.active_dialogue and self.active_npc:
                 # Advance dialogue with the current NPC
                 next_line = self.active_npc.talk()
@@ -348,16 +356,12 @@ class OverworldScene:
                     # Close the dialogue box
                     self.active_dialogue = None
                     self.active_npc = None
-            else:
-                # Try to interact with NPC
-                for npc in self.npcs:
-                    if (
-                        abs(self.player.x // TILE_SIZE - npc.x) <= 1
-                        and abs(self.player.y // TILE_SIZE - npc.y) <= 1
-                    ):
-                        self.active_npc = npc
-                        self.active_dialogue = npc.talk()
-                        break
+            elif not self.player.moving:
+                # Talk to the NPC the player is facing
+                npc = self.npc_at(*self.player.facing_tile())
+                if npc:
+                    self.active_npc = npc
+                    self.active_dialogue = npc.talk()
 
     def _execute_pause_action(self):
         """Execute selected pause menu action."""
@@ -395,8 +399,7 @@ class OverworldScene:
 
             # Check if this was a battle loss - reset player to spawn
             if getattr(self.manager, "battle_loss_reset", False):
-                self.player.x = 2 * TILE_SIZE
-                self.player.y = 2 * TILE_SIZE
+                self.player.place(*self.SPAWN_TILE)
                 delattr(self.manager, "battle_loss_reset")
 
             # A trainer only counts as defeated if the battle was won
@@ -422,42 +425,19 @@ class OverworldScene:
         if self.active_dialogue:
             return
 
-        keys = pygame.key.get_pressed()
-        prev_pos = (self.player.x, self.player.y)
-        # Calculate intended movement
-        dx = dy = 0
-        if keys[pygame.K_LEFT]:
-            dx = -self.player.speed * dt
-        elif keys[pygame.K_RIGHT]:
-            dx = self.player.speed * dt
-        if keys[pygame.K_UP]:
-            dy = -self.player.speed * dt
-        elif keys[pygame.K_DOWN]:
-            dy = self.player.speed * dt
-        target_x = self.player.x + dx
-        target_y = self.player.y + dy
-        if not self.npc_collides(target_x, target_y):
-            self.player.move(dx, dy, self.tilemap)
-        # Count steps only in tall grass
-        tx, ty = int(self.player.x // TILE_SIZE), int(self.player.y // TILE_SIZE)
-        in_grass = (
-            0 <= tx < self.tilemap.width
-            and 0 <= ty < self.tilemap.height
-            and self.tilemap.tiles[ty][tx] == 2
-        )
-        if (self.player.x, self.player.y) != prev_pos and in_grass:
-            self.steps += 1
-            if self.steps >= self.encounter_steps:
-                from .battle_scene import BattleScene
-
-                # Pass party states to battle
-                self.manager.push(
-                    BattleScene(
-                        self.manager, party_states=self.party, inventory=self.inventory
+        # Grid movement: a held arrow key starts a one-tile step
+        if not self.player.moving:
+            keys = pygame.key.get_pressed()
+            for key, direction in KEY_DIRECTIONS:
+                if keys[key]:
+                    self.player.try_step(
+                        direction,
+                        self.tilemap,
+                        lambda tx, ty: self.npc_at(tx, ty) is not None,
                     )
-                )
-                self.steps = 0
-                self.encounter_steps = random.randint(10, 20)
+                    break
+        if self.player.update(dt):
+            self._on_step_finished()
 
         # Camera follows player, bounded to the map
         map_w = self.tilemap.width * TILE_SIZE
@@ -468,6 +448,23 @@ class OverworldScene:
         self.camera_y = max(
             0, min(self.player.y - SCREEN_HEIGHT // 2, map_h - SCREEN_HEIGHT)
         )
+
+    def _on_step_finished(self):
+        """Roll for an encounter each time the player enters a tall grass tile."""
+        if self.tilemap.tile_at(*self.player.tile) != GRASS:
+            return
+        self.steps += 1
+        if self.steps >= self.encounter_steps:
+            from .battle_scene import BattleScene
+
+            # Pass party states to battle
+            self.manager.push(
+                BattleScene(
+                    self.manager, party_states=self.party, inventory=self.inventory
+                )
+            )
+            self.steps = 0
+            self.encounter_steps = random.randint(10, 20)
 
     def draw(self, surface):
         self.tilemap.draw(surface, self.camera_x, self.camera_y, self.tile_images)
@@ -485,21 +482,15 @@ class OverworldScene:
         # Draw dialogue box if active
         if self.active_dialogue:
             font = get_font(12)
-            box_w, box_h = 200, 32
-            lines = wrap_text(font, self.active_dialogue, box_w - 20)
-            box_h = 20 + 16 * len(lines)
-            pygame.draw.rect(
-                surface, GB_PALETTE[1], (20, SCREEN_HEIGHT - box_h - 10, box_w, box_h)
-            )
-            pygame.draw.rect(
-                surface,
-                GB_PALETTE[3],
-                (20, SCREEN_HEIGHT - box_h - 10, box_w, box_h),
-                1,
-            )
+            box_w = SCREEN_WIDTH - 16
+            lines = wrap_text(font, self.active_dialogue, box_w - 16)
+            box_h = 12 + 16 * len(lines)
+            box_y = SCREEN_HEIGHT - box_h - 4
+            pygame.draw.rect(surface, GB_PALETTE[1], (8, box_y, box_w, box_h))
+            pygame.draw.rect(surface, GB_PALETTE[3], (8, box_y, box_w, box_h), 1)
             for i, line in enumerate(lines):
                 text = font.render(line, True, GB_PALETTE[3])
-                surface.blit(text, (30, SCREEN_HEIGHT - box_h + 8 + i * 16))
+                surface.blit(text, (16, box_y + 6 + i * 16))
 
         self.draw_hud(surface)
         self.draw_control_hints(surface)

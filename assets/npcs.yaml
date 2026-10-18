@@ -9,8 +9,8 @@
     - "Did you know you can capture mascots with Packages?"
 - id: npc_2
   name: Ada
-  x: 12
-  y: 15
+  x: 20
+  y: 12
   sprite: bsd
   dialogue:
     - "I'm Ada, the code wizard."
