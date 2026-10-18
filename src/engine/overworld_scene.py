@@ -12,6 +12,7 @@ from src.constants import GB_PALETTE, SCREEN_HEIGHT, SCREEN_WIDTH, SPRITE_DIR
 from src.overworld import TILE_SIZE, Player, TileMap
 
 from . import mascots
+from .fonts import get_font, wrap_text
 from .save import SaveManager
 
 
@@ -114,13 +115,7 @@ class OverworldScene:
             return
 
         # Use a pixel font for crisp text if available, else fallback
-        font_path = os.path.join(
-            os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf"
-        )
-        if os.path.exists(font_path):
-            font = pygame.font.Font(font_path, 10)
-        else:
-            font = pygame.font.SysFont("Arial", 10, bold=True)
+        font = get_font(10)
 
         # HUD box in top-right
         hud_x = SCREEN_WIDTH - 80
@@ -176,13 +171,7 @@ class OverworldScene:
         pygame.draw.rect(surface, GB_PALETTE[3], (menu_x, menu_y, menu_w, menu_h), 2)
 
         # Menu items
-        font_path = os.path.join(
-            os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf"
-        )
-        if os.path.exists(font_path):
-            font = pygame.font.Font(font_path, 12)
-        else:
-            font = pygame.font.SysFont("Arial", 12, bold=True)
+        font = get_font(12)
 
         for i, item in enumerate(self.pause_menu_options):
             color = GB_PALETTE[3] if i == self.pause_menu_idx else GB_PALETTE[2]
@@ -198,13 +187,7 @@ class OverworldScene:
     def draw_notification(self, surface):
         """Draw the notification message box."""
         if self.notification_text:
-            font_path = os.path.join(
-                os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf"
-            )
-            if os.path.exists(font_path):
-                font = pygame.font.Font(font_path, 12)
-            else:
-                font = pygame.font.SysFont("Arial", 12, bold=True)
+            font = get_font(12)
 
             text_surf = font.render(self.notification_text, True, GB_PALETTE[3])
             text_rect = text_surf.get_rect(
@@ -300,13 +283,7 @@ class OverworldScene:
     def draw_control_hints(self, surface):
         """Draw the control hints at the bottom of the screen."""
         if self.show_controls_hint:
-            font_path = os.path.join(
-                os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf"
-            )
-            if os.path.exists(font_path):
-                font = pygame.font.Font(font_path, 12)
-            else:
-                font = pygame.font.SysFont("Arial", 12, bold=True)
+            font = get_font(12)
 
             hint_text = "Arrows:Move | Space:Talk | S:Save | L:Load | ESC:Menu"
             text_surf = font.render(hint_text, True, GB_PALETTE[3])
@@ -507,21 +484,9 @@ class OverworldScene:
             )
         # Draw dialogue box if active
         if self.active_dialogue:
-            font = pygame.font.SysFont("Arial", 12, bold=True)
+            font = get_font(12)
             box_w, box_h = 200, 32
-            # Word wrap
-            words = self.active_dialogue.split()
-            lines = []
-            current = ""
-            for word in words:
-                test = current + (" " if current else "") + word
-                if font.size(test)[0] <= box_w - 20:
-                    current = test
-                else:
-                    lines.append(current)
-                    current = word
-            if current:
-                lines.append(current)
+            lines = wrap_text(font, self.active_dialogue, box_w - 20)
             box_h = 20 + 16 * len(lines)
             pygame.draw.rect(
                 surface, GB_PALETTE[1], (20, SCREEN_HEIGHT - box_h - 10, box_w, box_h)

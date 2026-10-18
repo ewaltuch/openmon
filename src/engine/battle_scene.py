@@ -2,13 +2,13 @@
 BattleScene implementation for Open-Mon: simple turn-based battle, UI, capture.
 """
 
-import os
 import random
 
 import pygame
 
 from src.constants import GB_PALETTE, PARTY_MAX, SCREEN_HEIGHT, SCREEN_WIDTH
 from src.engine import mascots
+from src.engine.fonts import get_font
 from src.engine.mascots import (  # noqa: F401 - re-exported for callers/tests
     ELEMENT_TYPES,
     TYPE_EFFECTIVENESS,
@@ -476,20 +476,8 @@ class BattleScene:
 
     def draw(self, surface):
         # Use a pixel font for crisp text if available, else fallback
-        font_path = os.path.join(
-            os.path.dirname(__file__), "..", "..", "assets", "sprites", "pixel.ttf"
-        )
-        menu_font_size = 12
-        msg_font_size = 12
-        eff_font_size = 14
-        if os.path.exists(font_path):
-            menu_font = pygame.font.Font(font_path, menu_font_size)
-            msg_font = pygame.font.Font(font_path, msg_font_size)
-            eff_font = pygame.font.Font(font_path, eff_font_size)
-        else:
-            menu_font = pygame.font.SysFont("Arial", menu_font_size, bold=True)
-            msg_font = pygame.font.SysFont("Arial", msg_font_size, bold=True)
-            eff_font = pygame.font.SysFont("Arial", eff_font_size, bold=True)
+        menu_font = msg_font = get_font(12)
+        eff_font = get_font(14)
 
         surface.fill(GB_PALETTE[0])
         # Draw mascots

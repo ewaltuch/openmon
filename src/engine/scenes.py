@@ -5,6 +5,7 @@ Scene definitions for Open-Mon: Title, Overworld, Battle, Credits.
 import pygame
 
 from src.constants import GB_PALETTE
+from src.engine.fonts import get_font
 
 
 class Scene:
@@ -30,7 +31,7 @@ class TitleScene(Scene):
 
     def draw(self, surface):
         surface.fill(GB_PALETTE[0])
-        font = pygame.font.SysFont("Arial", 16)
+        font = get_font(16)
         text = font.render("Open-Mon", True, GB_PALETTE[3])
         surface.blit(text, (32, 60))
         subtitle = font.render("Press any key...", True, GB_PALETTE[2])
