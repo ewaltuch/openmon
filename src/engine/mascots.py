@@ -108,8 +108,12 @@ def make_mascot(name):
 
 
 @lru_cache(maxsize=None)
-def get_sprite(name):
-    """Battle sprite for a species, generated once and shared."""
+def get_sprite(name, scale=1):
+    """Battle sprite for a species, generated once per scale and shared."""
+    if scale != 1:
+        base = get_sprite(name)
+        size = (base.get_width() * scale, base.get_height() * scale)
+        return pygame.transform.scale(base, size)
     p = species(name)["placeholder"]
     img = Image.new("RGB", (MASCOT_SPRITE_SIZE, MASCOT_SPRITE_SIZE), GB_PALETTE[0])
     draw = ImageDraw.Draw(img)

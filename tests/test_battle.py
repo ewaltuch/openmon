@@ -1,4 +1,6 @@
 from unittest.mock import patch
+
+import pygame
 from src.engine.battle_scene import BattleScene, Move, TYPE_EFFECTIVENESS
 from src.engine.inventory import InventoryManager
 
@@ -211,14 +213,76 @@ def test_hp_never_goes_negative():
     assert scene.player.hp == 0
 
 
-def test_effectiveness_message_timer_is_in_seconds():
-    scene = BattleScene(DummyManager())
-    scene._set_eff_msg(2.0)
-    assert scene.eff_msg == "Super effective!"
-    scene.update(0.5)
-    assert scene.eff_msg == "Super effective!"
-    scene.update(1.5)  # dt is in seconds
-    assert scene.eff_msg is None
+def _press(scene, key=pygame.K_z):
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=key))
+
+
+def _texts(scene):
+    return [m.text for m in scene.messages]
+
+
+def test_turn_is_narrated_in_order_with_hp_snapshots():
+    """Both attacks and the effectiveness line are queued, not overwritten."""
+    party = [BattleScene(DummyManager()).make_mascot_state("Tux")]
+    scene = BattleScene(DummyManager(), party_states=party, wild_species="BSD Daemon")
+    _press(scene)  # dismiss "A wild BSD Daemon appeared!"
+    assert scene.state == scene.STATE_MENU
+
+    with patch(
+        "src.engine.battle_scene.random.choice", return_value=Move("Hit", 1, "Shell")
+    ):
+        _press(scene)  # Fight
+        _press(scene)  # Peck (Kernel vs Shell)
+
+    assert scene.state == scene.STATE_MESSAGE
+    assert _texts(scene) == [
+        "Tux used Peck!",
+        "It's super effective!",
+        "BSD Daemon used Hit!",
+        "It's not very effective...",
+    ]
+    # The opponent's HP drops with the first line; the player's only later
+    first, last = scene.messages[0], scene.messages[-1]
+    assert first.opponent_hp == scene.opponent.hp
+    assert first.player_hp == scene.player.max_hp
+    assert last.player_hp == scene.player.hp
+
+    for _ in range(4):
+        _press(scene)
+    assert scene.state == scene.STATE_MENU
+
+
+def test_faster_opponent_attacks_first():
+    party = [BattleScene(DummyManager()).make_mascot_state("BSD Daemon")]  # spd 5
+    scene = BattleScene(DummyManager(), party_states=party, wild_species="Octocat")
+    scene.messages.clear()
+    with patch(
+        "src.engine.battle_scene.random.choice", return_value=Move("PR", 5, "Editor")
+    ):
+        scene._player_attack(0)
+    assert _texts(scene)[0] == "Octocat used PR!"
+
+
+def test_fainted_player_does_not_attack_after_faster_opponent():
+    party = [BattleScene(DummyManager()).make_mascot_state("BSD Daemon", hp=1)]
+    scene = BattleScene(DummyManager(), party_states=party, wild_species="Octocat")
+    opponent_hp = scene.opponent.hp
+    scene._player_attack(0)
+    assert scene.opponent.hp == opponent_hp
+    assert scene.battle_over is True
+
+
+def test_last_message_ends_battle():
+    manager = DummyManager()
+    manager.pop = lambda: setattr(manager, "popped", True)
+    scene = BattleScene(manager, wild_species="Octocat")
+    scene.messages.clear()
+    scene.state = scene.STATE_MENU
+    scene.menu_idx = scene.MENU_FLEE
+    _press(scene)
+    assert scene.battle_over and not hasattr(manager, "popped")
+    _press(scene)  # dismiss "You fled!"
+    assert manager.popped is True
 
 
 def test_captured_mascot_joins_at_full_hp_even_if_duplicate():

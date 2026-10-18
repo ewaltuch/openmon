@@ -206,11 +206,12 @@ def test_trainer_battle_no_flee():
         is_trainer_battle=True,
     )
 
-    # Try to select flee option (menu index 2)
+    # Dismiss the intro message, then select flee (menu index 2)
+    event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z)
+    battle.handle_event(event)
     battle.menu_idx = battle.MENU_FLEE
 
     # Simulate pressing Z to confirm flee
-    event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z)
     battle.handle_event(event)
 
     # Verify flee was blocked
@@ -288,7 +289,9 @@ def test_trainer_battle_won_after_whole_party_faints():
     battle._player_attack(0)
 
     assert battle.battle_over is True
-    battle.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))
+    assert battle.msg == "You defeated the trainer!"
+    while battle.messages:
+        battle.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))
     assert manager.last_battle_won is True
 
 
