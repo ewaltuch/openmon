@@ -4,9 +4,11 @@
   x: 5
   y: 8
   sprite: tux
+  heals: true
   dialogue:
     - "Welcome to Open-Mon!"
     - "Did you know you can capture mascots with Packages?"
+    - "Let me patch up your mascots."
 - id: npc_2
   name: Ada
   x: 20

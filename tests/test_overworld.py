@@ -152,3 +152,20 @@ def test_npcs_stand_on_walkable_tiles():
     scene = OverworldScene(DummyManager())
     for npc in scene.npcs:
         assert scene.tilemap.is_walkable(npc.x, npc.y), npc.id
+
+
+def test_healer_npc_restores_party():
+    scene = OverworldScene(DummyManager())
+    scene.party[0]["hp"] = 1
+    scene.party[1]["hp"] = 0
+    scene.party[1]["fainted"] = True
+    healer = next(npc for npc in scene.npcs if npc.heals)
+    scene.player.place(healer.x - 1, healer.y)
+    scene.player.facing = "right"
+
+    space = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE)
+    for _ in range(len(healer.dialogue) + 1):
+        scene.handle_event(space)
+
+    assert scene.active_dialogue is None
+    assert all(s["hp"] == s["max_hp"] and not s["fainted"] for s in scene.party)

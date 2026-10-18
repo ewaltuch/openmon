@@ -14,6 +14,7 @@ class NPC:
         party=None,
         defeated=False,
         defeated_dialogue=None,
+        heals=False,
     ):
         self.id = id
         self.name = name
@@ -28,6 +29,7 @@ class NPC:
         self.trainer = trainer
         self.party = party or []  # List of mascot names for trainers
         self.defeated = defeated  # Track if trainer has been beaten
+        self.heals = heals  # Restores the party after talking
 
     def talk(self):
         # Use defeated dialogue if trainer has been beaten

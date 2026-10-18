@@ -104,6 +104,14 @@ class OverworldScene:
         """Initialize party from list of names, creating fresh states with full HP."""
         return [mascots.make_state(name) for name in names]
 
+    def heal_party(self):
+        """Restore every party mascot to full HP."""
+        for state in self.party:
+            state["hp"] = state["max_hp"]
+            state["fainted"] = False
+        self.notification_text = "Your mascots are fully healed!"
+        self.notification_timer = 2
+
     def draw_hud(self, surface):
         """Draw the HUD with party status."""
         if not self.party:
@@ -353,6 +361,8 @@ class OverworldScene:
                         self.manager.push(battle)
                         # Marked defeated on return, and only if the player won
                         self._pending_trainer = self.active_npc
+                    elif self.active_npc.heals:
+                        self.heal_party()
                     # Close the dialogue box
                     self.active_dialogue = None
                     self.active_npc = None
