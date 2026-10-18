@@ -52,7 +52,9 @@ def test_capture_adds_to_party():
 
     # Use party_states instead of party
     state = BattleScene(manager).make_mascot_state("Tux")
-    scene = BattleScene(manager, party_states=[state], inventory=inventory)
+    scene = BattleScene(
+        manager, party_states=[state], inventory=inventory, wild_species="Octocat"
+    )
 
     scene.opponent.hp = 1  # Make capture likely
 
@@ -222,7 +224,7 @@ def test_effectiveness_message_timer_is_in_seconds():
 def test_captured_mascot_joins_at_full_hp_even_if_duplicate():
     inventory = InventoryManager()
     inventory.add_item("package", 1)
-    scene = BattleScene(DummyManager(), inventory=inventory)
+    scene = BattleScene(DummyManager(), inventory=inventory, wild_species="Octocat")
     scene.party.append(scene.make_mascot("Octocat"))
     scene.party_states.append(scene.make_mascot_state("Octocat"))
     scene.opponent.hp = 1
@@ -249,3 +251,18 @@ def test_capture_blocked_when_party_full():
 
     assert scene.msg == "Your party is full!"
     assert inventory.get_item_count("package") == 1
+
+
+def test_wild_species_rolled_from_encounter_table():
+    from src.engine.mascots import WILD_ENCOUNTERS
+
+    names = {e["species"] for e in WILD_ENCOUNTERS}
+    for _ in range(20):
+        assert BattleScene(DummyManager()).opponent.name in names
+
+
+def test_unknown_species_fails_loudly():
+    import pytest
+
+    with pytest.raises(ValueError, match="Unknown mascot species"):
+        BattleScene(DummyManager()).make_mascot_state("Clippy")

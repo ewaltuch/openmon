@@ -2,43 +2,19 @@
 BattleScene implementation for Open-Mon: simple turn-based battle, UI, capture.
 """
 
-import pygame
-import random
-from src.constants import GB_PALETTE, PARTY_MAX, SCREEN_HEIGHT, SCREEN_WIDTH
-from PIL import Image, ImageDraw
 import os
+import random
 
+import pygame
 
-class Mascot:
-    def __init__(self, name, hp, atk, defense, spd, sprite, moves, type_):
-        self.name = name
-        self.max_hp = hp
-        self.hp = hp
-        self.atk = atk
-        self.defense = defense
-        self.spd = spd
-        self.sprite = sprite
-        self.moves = moves
-        self.type = type_
-
-
-class Move:
-
-    def __init__(self, name, power, type_):
-        self.name = name
-        self.power = power
-        self.type = type_
-
-
-ELEMENT_TYPES = ["Kernel", "Shell", "Browser", "Editor"]
-
-TYPE_EFFECTIVENESS = {
-    ("Kernel", "Shell"): 2.0,
-    ("Shell", "Kernel"): 0.5,
-    ("Browser", "Editor"): 2.0,
-    ("Editor", "Browser"): 0.5,
-    # Add more as needed
-}
+from src.constants import GB_PALETTE, PARTY_MAX, SCREEN_HEIGHT, SCREEN_WIDTH
+from src.engine import mascots
+from src.engine.mascots import (  # noqa: F401 - re-exported for callers/tests
+    ELEMENT_TYPES,
+    TYPE_EFFECTIVENESS,
+    Mascot,
+    Move,
+)
 
 
 class BattleScene:
@@ -60,6 +36,7 @@ class BattleScene:
         inventory=None,
         opponent_party=None,
         is_trainer_battle=False,
+        wild_species=None,
     ):
         self.manager = manager
         self.is_trainer_battle = is_trainer_battle
@@ -98,9 +75,11 @@ class BattleScene:
             self.msg = f"Trainer challenges you with {self.opponent.name}!"
         else:
             # Wild encounter
-            self.opponent = self.make_mascot("Octocat")
+            if wild_species is None:
+                wild_species = mascots.roll_wild_encounter()
+            self.opponent = self.make_mascot(wild_species)
             self.opponent_party = [self.opponent]
-            self.msg = "A wild Octocat appeared!"
+            self.msg = f"A wild {self.opponent.name} appeared!"
 
         self.menu_idx = 0
         self.state = self.STATE_MENU
@@ -122,148 +101,15 @@ class BattleScene:
             names.append("Switch")
         return names
 
+    # Thin wrappers over the species registry (src/engine/mascots.py)
     def make_mascot(self, name):
-        if name == "Tux":
-            return Mascot(
-                "Tux",
-                24,
-                8,
-                6,
-                7,
-                self._generate_tux_sprite(),
-                [
-                    Move("Peck", 6, "Kernel"),
-                    Move("Code", 8, "Editor"),
-                    Move("Shellshock", 10, "Shell"),
-                ],
-                "Kernel",
-            )
-        elif name == "BSD Daemon":
-            img = Image.new("RGB", (32, 32), GB_PALETTE[0])
-            draw = ImageDraw.Draw(img)
-            draw.ellipse([8, 8, 24, 24], fill=GB_PALETTE[2])
-            draw.rectangle([12, 24, 20, 28], fill=GB_PALETTE[1])
-            return Mascot(
-                "BSD Daemon",
-                22,
-                7,
-                7,
-                5,
-                pygame.image.fromstring(img.tobytes(), img.size, img.mode),
-                [
-                    Move("Fork Bomb", 7, "Shell"),
-                    Move("Daemonize", 5, "Kernel"),
-                    Move("Edit Conf", 8, "Editor"),
-                ],
-                "Shell",
-            )
-        elif name == "Octocat":
-            return Mascot(
-                "Octocat",
-                20,
-                7,
-                5,
-                6,
-                self._generate_octocat_sprite(),
-                [
-                    Move("Fork", 7, "Shell"),
-                    Move("PR", 5, "Editor"),
-                    Move("Browse", 9, "Browser"),
-                ],
-                "Browser",
-            )
-        # Default fallback
-        return Mascot(
-            name,
-            20,
-            5,
-            5,
-            5,
-            self._generate_tux_sprite(),
-            [Move("Peck", 5, "Kernel")],
-            "Kernel",
-        )
+        return mascots.make_mascot(name)
 
     def make_mascot_state(self, name, hp=None):
-        """
-        Create a mascot state dictionary with base stats.
-        If hp is None, sets to max_hp (for new mascots).
-        If hp is provided, uses that value (for loading/persistence).
-        """
-        if name == "Tux":
-            max_hp, atk, defense, spd, type_ = 24, 8, 6, 7, "Kernel"
-        elif name == "BSD Daemon":
-            max_hp, atk, defense, spd, type_ = 22, 7, 7, 5, "Shell"
-        elif name == "Octocat":
-            max_hp, atk, defense, spd, type_ = 20, 7, 5, 6, "Browser"
-        else:
-            # Default fallback
-            max_hp, atk, defense, spd, type_ = 20, 5, 5, 5, "Kernel"
-
-        return {
-            "name": name,
-            "hp": hp if hp is not None else max_hp,
-            "max_hp": max_hp,
-            "atk": atk,
-            "defense": defense,
-            "spd": spd,
-            "type": type_,
-            "fainted": False,
-        }
+        return mascots.make_state(name, hp)
 
     def hydrate_mascot(self, state):
-        """
-        Create a full Mascot object from a state dictionary.
-        Generates sprite and moves based on name.
-        """
-        name = state["name"]
-
-        # Generate sprite and moves based on name
-        if name == "Tux":
-            sprite = self._generate_tux_sprite()
-            moves = [
-                Move("Peck", 6, "Kernel"),
-                Move("Code", 8, "Editor"),
-                Move("Shellshock", 10, "Shell"),
-            ]
-        elif name == "BSD Daemon":
-            img = Image.new("RGB", (32, 32), GB_PALETTE[0])
-            draw = ImageDraw.Draw(img)
-            draw.ellipse([8, 8, 24, 24], fill=GB_PALETTE[2])
-            draw.rectangle([12, 24, 20, 28], fill=GB_PALETTE[1])
-            sprite = pygame.image.fromstring(img.tobytes(), img.size, img.mode)
-            moves = [
-                Move("Fork Bomb", 7, "Shell"),
-                Move("Daemonize", 5, "Kernel"),
-                Move("Edit Conf", 8, "Editor"),
-            ]
-        elif name == "Octocat":
-            sprite = self._generate_octocat_sprite()
-            moves = [
-                Move("Fork", 7, "Shell"),
-                Move("PR", 5, "Editor"),
-                Move("Browse", 9, "Browser"),
-            ]
-        else:
-            # Default fallback
-            sprite = self._generate_tux_sprite()
-            moves = [Move("Peck", 5, "Kernel")]
-
-        # Create Mascot with state values
-        mascot = Mascot(
-            name=state["name"],
-            hp=state["max_hp"],  # Set to max_hp initially
-            atk=state["atk"],
-            defense=state["defense"],
-            spd=state["spd"],
-            sprite=sprite,
-            moves=moves,
-            type_=state["type"],
-        )
-        # Then override with actual current HP
-        mascot.hp = state["hp"]
-
-        return mascot
+        return mascots.hydrate(state)
 
     def get_party_states(self):
         """
@@ -284,20 +130,6 @@ class BattleScene:
                 }
             )
         return states
-
-    def _generate_tux_sprite(self):
-        img = Image.new("RGB", (32, 32), GB_PALETTE[0])
-        draw = ImageDraw.Draw(img)
-        draw.ellipse([8, 8, 24, 24], fill=GB_PALETTE[2])
-        draw.rectangle([14, 20, 18, 28], fill=GB_PALETTE[3])
-        return pygame.image.fromstring(img.tobytes(), img.size, img.mode)
-
-    def _generate_octocat_sprite(self):
-        img = Image.new("RGB", (32, 32), GB_PALETTE[0])
-        draw = ImageDraw.Draw(img)
-        draw.ellipse([8, 8, 24, 24], fill=GB_PALETTE[1])
-        draw.rectangle([12, 24, 20, 28], fill=GB_PALETTE[3])
-        return pygame.image.fromstring(img.tobytes(), img.size, img.mode)
 
     def _get_available_party_indices(self):
         """Get list of indices for non-fainted party members."""

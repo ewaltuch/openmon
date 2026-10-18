@@ -1,0 +1,54 @@
+# Mascot species, type chart and wild encounters for Open-Mon.
+# Loaded by src/engine/mascots.py.
+
+types: [Kernel, Shell, Browser, Editor]
+
+# Attacking type -> defending type -> damage multiplier (default 1.0)
+type_effectiveness:
+  Kernel: {Shell: 2.0}
+  Shell: {Kernel: 0.5}
+  Browser: {Editor: 2.0}
+  Editor: {Browser: 0.5}
+
+species:
+  Tux:
+    type: Kernel
+    hp: 24
+    atk: 8
+    defense: 6
+    spd: 7
+    moves:
+      - {name: Peck, power: 6, type: Kernel}
+      - {name: Code, power: 8, type: Editor}
+      - {name: Shellshock, power: 10, type: Shell}
+    # Drawn until a real sprite exists: palette shades and the "feet" box
+    placeholder: {body: 2, feet: 3, feet_box: [14, 20, 18, 28]}
+
+  BSD Daemon:
+    type: Shell
+    hp: 22
+    atk: 7
+    defense: 7
+    spd: 5
+    moves:
+      - {name: Fork Bomb, power: 7, type: Shell}
+      - {name: Daemonize, power: 5, type: Kernel}
+      - {name: Edit Conf, power: 8, type: Editor}
+    placeholder: {body: 2, feet: 1, feet_box: [12, 24, 20, 28]}
+
+  Octocat:
+    type: Browser
+    hp: 20
+    atk: 7
+    defense: 5
+    spd: 6
+    moves:
+      - {name: Fork, power: 7, type: Shell}
+      - {name: PR, power: 5, type: Editor}
+      - {name: Browse, power: 9, type: Browser}
+    placeholder: {body: 1, feet: 3, feet_box: [12, 24, 20, 28]}
+
+# Species met in tall grass, with relative weights
+wild_encounters:
+  - {species: Octocat, weight: 3}
+  - {species: BSD Daemon, weight: 1}

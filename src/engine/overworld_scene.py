@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw
 from src.constants import GB_PALETTE, SCREEN_HEIGHT, SCREEN_WIDTH, SPRITE_DIR
 from src.overworld import TILE_SIZE, Player, TileMap
 
+from . import mascots
 from .save import SaveManager
 
 
@@ -95,10 +96,7 @@ class OverworldScene:
 
     def _initialize_party(self, names):
         """Initialize party from list of names, creating fresh states with full HP."""
-        from .battle_scene import BattleScene
-
-        bs = BattleScene(self.manager)
-        return [bs.make_mascot_state(name) for name in names]
+        return [mascots.make_state(name) for name in names]
 
     def draw_hud(self, surface):
         """Draw the HUD with party status."""
@@ -256,7 +254,7 @@ class OverworldScene:
                 self.party = party_data
                 # Validate party states have required keys
                 for state in self.party:
-                    if not all(
+                    if state.get("name") not in mascots.SPECIES or not all(
                         k in state
                         for k in [
                             "name",
@@ -357,12 +355,8 @@ class OverworldScene:
                         from .battle_scene import BattleScene
 
                         # Create trainer party states and hydrate to Mascot objects
-                        trainer_party_states = self._initialize_party(
-                            self.active_npc.party
-                        )
-                        bs = BattleScene(self.manager)
                         trainer_party = [
-                            bs.hydrate_mascot(state) for state in trainer_party_states
+                            mascots.make_mascot(name) for name in self.active_npc.party
                         ]
                         battle = BattleScene(
                             self.manager,
