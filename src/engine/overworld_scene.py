@@ -9,7 +9,7 @@ import pygame
 from PIL import Image, ImageDraw
 
 from src.constants import GB_PALETTE, SCREEN_HEIGHT, SCREEN_WIDTH, SPRITE_DIR
-from src.overworld import MAP_HEIGHT, MAP_WIDTH, TILE_SIZE, Player, TileMap
+from src.overworld import TILE_SIZE, Player, TileMap
 
 from .save import SaveManager
 
@@ -39,8 +39,7 @@ class OverworldScene:
         self.camera_y = 0
         self.steps = 0
         self.encounter_steps = random.randint(10, 20)
-        self._pending_captured = None
-        self._last_battle_captured_name = None
+        self._pending_trainer = None
         # Load NPCs
         from src.engine.npc import load_npcs
 
@@ -339,10 +338,11 @@ class OverworldScene:
                     self.is_paused = False
             return
 
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
-            self._save_game()
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_l:
-            self._load_game()
+        if event.type == pygame.KEYDOWN and not self.active_dialogue:
+            if event.key == pygame.K_s:
+                self._save_game()
+            elif event.key == pygame.K_l:
+                self._load_game()
         # Interact with NPCs (spacebar)
         if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
             if self.active_dialogue and self.active_npc:
@@ -372,8 +372,8 @@ class OverworldScene:
                             is_trainer_battle=True,
                         )
                         self.manager.push(battle)
-                        # Mark trainer as defeated (will be set when returning from battle)
-                        self.active_npc.defeated = True
+                        # Marked defeated on return, and only if the player won
+                        self._pending_trainer = self.active_npc
                     # Close the dialogue box
                     self.active_dialogue = None
                     self.active_npc = None
@@ -428,18 +428,28 @@ class OverworldScene:
                 self.player.y = 2 * TILE_SIZE
                 delattr(self.manager, "battle_loss_reset")
 
+            # A trainer only counts as defeated if the battle was won
+            won = getattr(self.manager, "last_battle_won", False)
+            if won:
+                delattr(self.manager, "last_battle_won")
+            if self._pending_trainer is not None:
+                if won:
+                    self._pending_trainer.defeated = True
+                self._pending_trainer = None
+
         # Check if a mascot was captured in the last battle and add to party
         captured_name = getattr(self.manager, "captured_mascot_name", None)
         if captured_name:
-            # Check if already in party (comparing against state dicts)
-            if not any(state["name"] == captured_name for state in self.party):
-                # Create fresh state with full HP
-                from .battle_scene import BattleScene
-
-                bs = BattleScene(self.manager)
-                self.party.append(bs.make_mascot_state(captured_name))
+            # The synced battle party already includes the capture; only add it
+            # when no party sync came with the flag
+            if not battle_states:
+                self.party.extend(self._initialize_party([captured_name]))
             # Clear the flag so we don't add it again
             delattr(self.manager, "captured_mascot_name")
+
+        # The player stands still while talking
+        if self.active_dialogue:
+            return
 
         keys = pygame.key.get_pressed()
         prev_pos = (self.player.x, self.player.y)
@@ -478,19 +488,14 @@ class OverworldScene:
                 self.steps = 0
                 self.encounter_steps = random.randint(10, 20)
 
-        # Camera follows player
+        # Camera follows player, bounded to the map
+        map_w = self.tilemap.width * TILE_SIZE
+        map_h = self.tilemap.height * TILE_SIZE
         self.camera_x = max(
-            0,
-            min(
-                self.player.x - SCREEN_WIDTH // 2, MAP_WIDTH * TILE_SIZE - SCREEN_WIDTH
-            ),
+            0, min(self.player.x - SCREEN_WIDTH // 2, map_w - SCREEN_WIDTH)
         )
         self.camera_y = max(
-            0,
-            min(
-                self.player.y - SCREEN_HEIGHT // 2,
-                MAP_HEIGHT * TILE_SIZE - SCREEN_HEIGHT,
-            ),
+            0, min(self.player.y - SCREEN_HEIGHT // 2, map_h - SCREEN_HEIGHT)
         )
 
     def draw(self, surface):

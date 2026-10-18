@@ -195,3 +195,57 @@ def test_fainted_mascot_cannot_attack():
     # Opponent should not have taken damage
     assert scene.opponent.hp == opponent_hp_before
     assert "unable to battle" in scene.msg
+
+
+def test_hp_never_goes_negative():
+    scene = BattleScene(DummyManager())
+    scene.opponent.hp = 1
+    scene._player_attack(2)
+    assert scene.opponent.hp == 0
+
+    scene = BattleScene(DummyManager(), party_states=[scene.make_mascot_state("Tux")])
+    scene.player.hp = 1
+    scene._opponent_attack()
+    assert scene.player.hp == 0
+
+
+def test_effectiveness_message_timer_is_in_seconds():
+    scene = BattleScene(DummyManager())
+    scene._set_eff_msg(2.0)
+    assert scene.eff_msg == "Super effective!"
+    scene.update(0.5)
+    assert scene.eff_msg == "Super effective!"
+    scene.update(1.5)  # dt is in seconds
+    assert scene.eff_msg is None
+
+
+def test_captured_mascot_joins_at_full_hp_even_if_duplicate():
+    inventory = InventoryManager()
+    inventory.add_item("package", 1)
+    scene = BattleScene(DummyManager(), inventory=inventory)
+    scene.party.append(scene.make_mascot("Octocat"))
+    scene.party_states.append(scene.make_mascot_state("Octocat"))
+    scene.opponent.hp = 1
+
+    with patch("src.engine.battle_scene.random.random", return_value=0.1):
+        scene._try_capture()
+
+    assert sum(m.name == "Octocat" for m in scene.party) == 2
+    assert scene.party[-1].hp == scene.party[-1].max_hp
+    assert scene.get_party_states()[-1]["hp"] == scene.party[-1].max_hp
+
+
+def test_capture_blocked_when_party_full():
+    from src.constants import PARTY_MAX
+
+    inventory = InventoryManager()
+    inventory.add_item("package", 1)
+    states = [BattleScene(DummyManager()).make_mascot_state("Tux")] * PARTY_MAX
+    scene = BattleScene(
+        DummyManager(), party_states=[dict(s) for s in states], inventory=inventory
+    )
+
+    scene._try_capture()
+
+    assert scene.msg == "Your party is full!"
+    assert inventory.get_item_count("package") == 1

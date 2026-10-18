@@ -249,3 +249,73 @@ def test_trainer_defeated_dialogue():
     assert trainer.talk() == "You're really strong!"
     assert trainer.talk() == "I need to train more..."
     assert trainer.talk() is None  # Dialogue exhausted
+
+
+def _trainer_battle(manager, opponent_names):
+    bs = BattleScene(manager)
+    opponent_party = [
+        bs.hydrate_mascot(bs.make_mascot_state(name)) for name in opponent_names
+    ]
+    return BattleScene(
+        manager,
+        party_states=[bs.make_mascot_state("Tux")],
+        inventory=InventoryManager(),
+        opponent_party=opponent_party,
+        is_trainer_battle=True,
+    )
+
+
+def test_trainer_sends_out_next_mascot():
+    """Fainting the first trainer mascot brings out the next, not a win."""
+    manager = SceneManager()
+    battle = _trainer_battle(manager, ["BSD Daemon", "Octocat"])
+    battle.opponent.hp = 1
+
+    battle._player_attack(0)
+
+    assert battle.battle_over is False
+    assert battle.opponent.name == "Octocat"
+    assert "Trainer sent out Octocat!" in battle.msg
+
+
+def test_trainer_battle_won_after_whole_party_faints():
+    manager = SceneManager()
+    battle = _trainer_battle(manager, ["BSD Daemon", "Octocat"])
+    for mascot in battle.opponent_party:
+        mascot.hp = 1
+
+    battle._player_attack(0)
+    battle._player_attack(0)
+
+    assert battle.battle_over is True
+    battle.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))
+    assert manager.last_battle_won is True
+
+
+def _overworld_after_trainer_battle(won):
+    from src.engine.overworld_scene import OverworldScene
+
+    pygame.init()
+    manager = SceneManager()
+    scene = OverworldScene(manager)
+    trainer = next(npc for npc in scene.npcs if npc.trainer)
+    scene._pending_trainer = trainer
+    manager.last_battle_party_states = scene.party
+    if won:
+        manager.last_battle_won = True
+    scene.update(0.016)
+    return manager, scene, trainer
+
+
+def test_trainer_defeated_only_on_win():
+    manager, scene, trainer = _overworld_after_trainer_battle(won=True)
+    assert trainer.defeated is True
+    assert not hasattr(manager, "last_battle_won")
+    assert scene._pending_trainer is None
+
+
+def test_losing_to_trainer_keeps_them_undefeated():
+    _, scene, trainer = _overworld_after_trainer_battle(won=False)
+    assert trainer.defeated is False
+    assert trainer.is_trainer() is True
+    assert scene._pending_trainer is None

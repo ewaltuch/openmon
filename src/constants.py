@@ -7,6 +7,9 @@ SCREEN_WIDTH = 240
 SCREEN_HEIGHT = 160
 FPS = 60
 
+# Largest party the battle switch menu can display
+PARTY_MAX = 5
+
 # Game Boy 4-shade palette (lightest to darkest)
 GB_PALETTE = [
     (224, 248, 208),  # White

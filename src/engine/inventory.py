@@ -23,6 +23,9 @@ class Item:
             return False  # Key items are not consumed
 
         if self.effect:
+            # Healing can't bring back a fainted mascot; that takes a revive
+            if target.hp <= 0 and "revive" not in self.effect:
+                return False
             if "heal" in self.effect:
                 heal_amount = self.effect["heal"]
                 if target.hp < target.max_hp:

@@ -241,3 +241,39 @@ class TestInventoryManager:
 
         assert inventory2.get_item_count("package") == 5
         assert inventory2.get_item_count("health_pack") == 3
+
+
+def test_revive_benched_mascot_in_battle():
+    """Revive targets a fainted party member and clears its fainted flag."""
+    from src.engine.battle_scene import BattleScene
+
+    class Manager:
+        pass
+
+    inventory = InventoryManager()
+    inventory.add_item("revive", 1)
+    bs = BattleScene(Manager())
+    tux = bs.make_mascot_state("Tux")
+    daemon = bs.make_mascot_state("BSD Daemon", hp=0)
+    daemon["fainted"] = True
+    battle = BattleScene(Manager(), party_states=[tux, daemon], inventory=inventory)
+
+    battle._use_item(0)  # Revive is the only item
+    assert battle.state == battle.STATE_PARTY_SELECT
+    assert battle._get_selectable_party_indices() == [1]
+
+    battle._use_item_on(1)
+
+    assert battle.party_states[1]["fainted"] is False
+    assert battle.party[1].hp == battle.party[1].max_hp // 2
+    assert inventory.get_item_count("revive") == 0
+
+
+def test_heal_does_not_work_on_fainted_mascot():
+    item = InventoryManager().get_item("health_pack")
+
+    class Target:
+        hp = 0
+        max_hp = 20
+
+    assert item.use(Target()) is False

@@ -4,7 +4,7 @@ BattleScene implementation for Open-Mon: simple turn-based battle, UI, capture.
 
 import pygame
 import random
-from src.constants import GB_PALETTE, SCREEN_WIDTH, SCREEN_HEIGHT
+from src.constants import GB_PALETTE, PARTY_MAX, SCREEN_HEIGHT, SCREEN_WIDTH
 from PIL import Image, ImageDraw
 import os
 
@@ -93,11 +93,13 @@ class BattleScene:
         # Set up opponent based on battle type
         if is_trainer_battle and opponent_party:
             # Trainer battle - use first mascot from opponent party
-            self.opponent = opponent_party[0]
+            self.opponent_party = list(opponent_party)
+            self.opponent = self.opponent_party[0]
             self.msg = f"Trainer challenges you with {self.opponent.name}!"
         else:
             # Wild encounter
             self.opponent = self.make_mascot("Octocat")
+            self.opponent_party = [self.opponent]
             self.msg = "A wild Octocat appeared!"
 
         self.menu_idx = 0
@@ -109,6 +111,7 @@ class BattleScene:
         self.party_select_idx = 0
         self.forced_switch = False
         self.inventory = inventory
+        self.pending_item = None
         self.eff_msg = None
         self.eff_msg_timer = 0
 
@@ -304,9 +307,45 @@ class BattleScene:
             if not self.party_states[i].get("fainted", False)
         ]
 
+    def _get_selectable_party_indices(self):
+        """Indices the party menu may select: item targets or switch candidates."""
+        item = self.pending_item
+        if item is not None:
+            if "revive" in item.effect:
+                return [
+                    i
+                    for i in range(len(self.party))
+                    if self.party_states[i].get("fainted", False)
+                ]
+            return [
+                i
+                for i in self._get_available_party_indices()
+                if self.party[i].hp < self.party[i].max_hp
+            ]
+        return [i for i in self._get_available_party_indices() if i != self.active_idx]
+
     def _check_all_fainted(self):
         """Check if all party members have fainted."""
         return all(state.get("fainted", False) for state in self.party_states)
+
+    def _opponent_party_fainted(self):
+        """Check if every opponent mascot has fainted."""
+        return all(m.hp <= 0 for m in self.opponent_party)
+
+    def _calc_damage(self, move, attacker, defender):
+        """Return (damage, type multiplier) for attacker using move on defender."""
+        multiplier = TYPE_EFFECTIVENESS.get((move.type, defender.type), 1.0)
+        dmg = max(1, int((move.power + attacker.atk - defender.defense) * multiplier))
+        return dmg, multiplier
+
+    def _set_eff_msg(self, multiplier):
+        if multiplier > 1.0:
+            self.eff_msg = "Super effective!"
+        elif multiplier < 1.0:
+            self.eff_msg = "Not very effective..."
+        else:
+            self.eff_msg = None
+        self.eff_msg_timer = 1.5 if self.eff_msg else 0
 
     def _execute_switch(self, new_idx):
         """Execute a party switch to the given index."""
@@ -334,10 +373,12 @@ class BattleScene:
                     self.manager.battle_loss_reset = True
                 else:
                     self.manager.last_battle_party_states = self.get_party_states()
+                    if self._opponent_party_fainted():
+                        self.manager.last_battle_won = True
 
                 self.manager.pop()
             return
-        if self.state == "menu":
+        if self.state == self.STATE_MENU:
             if event.type == pygame.KEYDOWN:
                 # Check if current mascot is fainted - shouldn't be in menu state if so
                 if self.party_states[self.active_idx].get("fainted", False):
@@ -350,18 +391,18 @@ class BattleScene:
                     self.menu_idx = (self.menu_idx + 1) % menu_len
                 elif event.key in (pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER):
                     if self.menu_idx == self.MENU_FIGHT:
-                        self.state = "move_select"
+                        self.state = self.STATE_MOVE_SELECT
                         self.move_idx = 0
                     elif self.menu_idx == self.MENU_ITEM:
                         if self.inventory and self.inventory.get_all_items():
-                            self.state = "item_select"
+                            self.state = self.STATE_ITEM_SELECT
                             self.item_idx = 0
                         else:
                             self.msg = "No items available!"
                     elif self.menu_idx == self.MENU_FLEE:
                         if self.is_trainer_battle:
                             self.msg = "You can't flee from a trainer battle!"
-                            self.state = "menu"
+                            self.state = self.STATE_MENU
                         else:
                             self.msg = "You fled!"
                             self.battle_over = True
@@ -369,11 +410,11 @@ class BattleScene:
                         "Switch"
                     ):
                         self._switch_party()
-        elif self.state == "move_select":
+        elif self.state == self.STATE_MOVE_SELECT:
             if event.type == pygame.KEYDOWN:
                 # Check if current mascot is fainted
                 if self.party_states[self.active_idx].get("fainted", False):
-                    self.state = "menu"
+                    self.state = self.STATE_MENU
                     return
 
                 moves_len = len(self.player.moves)
@@ -385,10 +426,10 @@ class BattleScene:
                     self._player_attack(self.move_idx)
                     # Only return to menu if not in forced switch (player fainted)
                     if self.state != self.STATE_PARTY_SELECT:
-                        self.state = "menu"
+                        self.state = self.STATE_MENU
                 elif event.key == pygame.K_x:
-                    self.state = "menu"
-        elif self.state == "item_select":
+                    self.state = self.STATE_MENU
+        elif self.state == self.STATE_ITEM_SELECT:
             if event.type == pygame.KEYDOWN:
                 items = self.inventory.get_all_items()
                 if event.key == pygame.K_UP:
@@ -398,12 +439,15 @@ class BattleScene:
                 elif event.key in (pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER):
                     self._use_item(self.item_idx)
                 elif event.key == pygame.K_x:
-                    self.state = "menu"
+                    self.state = self.STATE_MENU
         elif self.state == self.STATE_PARTY_SELECT:
             if event.type == pygame.KEYDOWN:
-                available = self._get_available_party_indices()
+                available = self._get_selectable_party_indices()
                 if not available:
-                    # No available mascots (shouldn't happen)
+                    # Nothing selectable (shouldn't happen): back out
+                    if not self.forced_switch:
+                        self.pending_item = None
+                        self.state = self.STATE_MENU
                     return
 
                 if event.key == pygame.K_UP:
@@ -423,10 +467,11 @@ class BattleScene:
                     new_pos = (current_pos + 1) % len(available)
                     self.party_select_idx = available[new_pos]
                 elif event.key in (pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER):
-                    if (
-                        self.party_select_idx in available
-                        and self.party_select_idx != self.active_idx
-                    ):
+                    if self.party_select_idx not in available:
+                        return
+                    if self.pending_item is not None:
+                        self._use_item_on(self.party_select_idx)
+                    else:
                         self._execute_switch(self.party_select_idx)
                         # If not forced, opponent gets a free attack
                         if not self.forced_switch:
@@ -435,24 +480,19 @@ class BattleScene:
                 elif event.key == pygame.K_x:
                     # Can only cancel if not forced
                     if not self.forced_switch:
+                        self.pending_item = None
                         self.state = self.STATE_MENU
 
     def _switch_party(self):
         """Open party selection menu for voluntary switching."""
-        if len(self.party) > 1:
-            available = self._get_available_party_indices()
-            if len(available) > 1 or (
-                len(available) == 1 and available[0] != self.active_idx
-            ):
-                # Find first available mascot that's not active
-                for idx in available:
-                    if idx != self.active_idx:
-                        self.party_select_idx = idx
-                        break
-                self.forced_switch = False
-                self.state = self.STATE_PARTY_SELECT
-            else:
-                self.msg = "No other mascots available!"
+        self.pending_item = None
+        candidates = self._get_selectable_party_indices()
+        if candidates:
+            self.party_select_idx = candidates[0]
+            self.forced_switch = False
+            self.state = self.STATE_PARTY_SELECT
+        else:
+            self.msg = "No other mascots available!"
 
     def _player_attack(self, move_idx):
         # Don't allow fainted mascots to attack
@@ -461,44 +501,28 @@ class BattleScene:
             return
 
         move = self.player.moves[move_idx]
-        multiplier = TYPE_EFFECTIVENESS.get((move.type, self.opponent.type), 1.0)
-        dmg = max(
-            1, int((move.power + self.player.atk - self.opponent.defense) * multiplier)
-        )
-        self.opponent.hp -= dmg
-        if multiplier > 1.0:
-            self.eff_msg = "Super effective!"
-            self.eff_msg_timer = 1500
-        elif multiplier < 1.0:
-            self.eff_msg = "Not very effective..."
-            self.eff_msg_timer = 1500
-        else:
-            self.eff_msg = None
+        dmg, multiplier = self._calc_damage(move, self.player, self.opponent)
+        self.opponent.hp = max(0, self.opponent.hp - dmg)
+        self._set_eff_msg(multiplier)
         self.msg = f"{self.player.name} used {move.name}! ({dmg} dmg)"
         if self.opponent.hp <= 0:
             self.msg = f"{self.opponent.name} fainted!"
-            self.battle_over = True
+            next_opponent = next((m for m in self.opponent_party if m.hp > 0), None)
+            if next_opponent is None:
+                self.battle_over = True
+            else:
+                self.opponent = next_opponent
+                self.msg += f"\nTrainer sent out {self.opponent.name}!"
         else:
             self._opponent_attack()
 
     def _opponent_attack(self):
         move = random.choice(self.opponent.moves)
-        multiplier = TYPE_EFFECTIVENESS.get((move.type, self.player.type), 1.0)
-        dmg = max(
-            1, int((move.power + self.opponent.atk - self.player.defense) * multiplier)
-        )
-        self.player.hp -= dmg
-        if multiplier > 1.0:
-            self.eff_msg = "Super effective!"
-            self.eff_msg_timer = 1500
-        elif multiplier < 1.0:
-            self.eff_msg = "Not very effective..."
-            self.eff_msg_timer = 1500
-        else:
-            self.eff_msg = None
+        dmg, multiplier = self._calc_damage(move, self.opponent, self.player)
+        self.player.hp = max(0, self.player.hp - dmg)
+        self._set_eff_msg(multiplier)
         self.msg += f"\n{self.opponent.name} used {move.name}! ({dmg} dmg)"
         if self.player.hp <= 0:
-            self.player.hp = 0  # Clamp to zero
             self.party_states[self.active_idx]["fainted"] = True
             self.msg += f"\n{self.player.name} fainted!"
 
@@ -528,45 +552,64 @@ class BattleScene:
         if item.type == item.TYPE_PACKAGE:
             if not self.inventory.has_item("package"):
                 self.msg = "No packages available!"
-                self.state = "menu"
+                self.state = self.STATE_MENU
                 return
             self._try_capture()
             return
 
-        # Handle consumable items (healing, etc.)
+        # Consumables (healing, revive) need a target: pick one from the party
         if item.type == item.TYPE_CONSUMABLE:
-            used = self.inventory.use_item(item.id, self.player)
-            if used:
-                if "heal" in item.effect:
-                    self.msg = f"Used {item.name} on {self.player.name}! Restored HP."
-                elif "full_heal" in item.effect:
-                    self.msg = (
-                        f"Used {item.name} on {self.player.name}! Fully restored HP."
-                    )
-                elif "revive" in item.effect:
-                    self.msg = f"Used {item.name} on {self.player.name}! Revived!"
-                self._opponent_attack()
-            else:
-                self.msg = f"{item.name} had no effect!"
-            self.state = "menu"
+            self.pending_item = item
+            self.forced_switch = False
+            targets = self._get_selectable_party_indices()
+            if not targets:
+                self.msg = f"{item.name} would have no effect!"
+                self.pending_item = None
+                self.state = self.STATE_MENU
+                return
+            self.party_select_idx = targets[0]
+            self.state = self.STATE_PARTY_SELECT
             return
 
         # Key items can't be used in battle
         self.msg = "Can't use that here!"
-        self.state = "menu"
+        self.state = self.STATE_MENU
+
+    def _use_item_on(self, idx):
+        """Apply the pending consumable to party member idx."""
+        item = self.pending_item
+        self.pending_item = None
+        target = self.party[idx]
+        self.state = self.STATE_MENU
+        if not self.inventory.use_item(item.id, target):
+            self.msg = f"{item.name} had no effect!"
+            return
+        if "revive" in item.effect:
+            self.party_states[idx]["fainted"] = False
+            self.msg = f"Used {item.name} on {target.name}! Revived!"
+        elif "full_heal" in item.effect:
+            self.msg = f"Used {item.name} on {target.name}! Fully restored HP."
+        else:
+            self.msg = f"Used {item.name} on {target.name}! Restored HP."
+        self._opponent_attack()
 
     def _try_capture(self):
         """Attempt to capture wild mascot using a package."""
         # Cannot capture trainer's mascots
         if self.is_trainer_battle:
             self.msg = "You can't capture a trainer's mascot!"
-            self.state = "menu"
+            self.state = self.STATE_MENU
             return
 
         # Check if player has packages
         if not self.inventory or not self.inventory.has_item("package"):
             self.msg = "No packages available!"
-            self.state = "menu"
+            self.state = self.STATE_MENU
+            return
+
+        if len(self.party) >= PARTY_MAX:
+            self.msg = "Your party is full!"
+            self.state = self.STATE_MENU
             return
 
         # Consume a package
@@ -581,10 +624,9 @@ class BattleScene:
             # Create fresh state with full HP for captured mascot
             captured_state = self.make_mascot_state(self.opponent.name)
 
-            # Add to party for this battle if not duplicate
-            if not any(m.name == self.opponent.name for m in self.party):
-                self.party.append(self.opponent)
-                self.party_states.append(captured_state)
+            # The captured mascot joins at full HP, not with its battle damage
+            self.party.append(self.hydrate_mascot(captured_state))
+            self.party_states.append(captured_state)
 
             # Persist captured mascot name on the manager for the overworld
             setattr(self.manager, "captured_mascot_name", self.opponent.name)
@@ -592,7 +634,7 @@ class BattleScene:
         else:
             self.msg = "Capture failed!"
             self._opponent_attack()
-        self.state = "menu"
+        self.state = self.STATE_MENU
 
     def update(self, dt):
         if self.eff_msg_timer > 0:
@@ -673,7 +715,7 @@ class BattleScene:
             surface.blit(eff_text_surf, eff_text_rect)
 
         window_y = SCREEN_HEIGHT - 56
-        if self.state == "menu":
+        if self.state == self.STATE_MENU:
             menu_names = self.menu_names
             if "Switch" in menu_names:
                 vert_names = menu_names[:-1]
@@ -708,7 +750,7 @@ class BattleScene:
                     text,
                     (SCREEN_WIDTH // 2 - text.get_width() // 2, window_y + 4 + i * 14),
                 )
-        elif self.state == "move_select":
+        elif self.state == self.STATE_MOVE_SELECT:
             moves = self.player.moves
             window_height = 4 + len(moves) * 14 + 4
             pygame.draw.rect(
@@ -726,7 +768,7 @@ class BattleScene:
                 "Choose a move (Z/Enter to confirm, X to cancel)", True, GB_PALETTE[3]
             )
             surface.blit(text, (8, window_y + 4 + len(moves) * 14))
-        elif self.state == "item_select":
+        elif self.state == self.STATE_ITEM_SELECT:
             items = self.inventory.get_all_items() if self.inventory else []
             window_height = 4 + max(1, len(items)) * 14 + 18
             pygame.draw.rect(
@@ -753,7 +795,13 @@ class BattleScene:
             for y in range(0, SCREEN_HEIGHT, 2):
                 pygame.draw.line(surface, GB_PALETTE[2], (0, y), (SCREEN_WIDTH, y))
 
-            prompt = "Choose next mascot!" if self.forced_switch else "Switch to:"
+            if self.pending_item is not None:
+                prompt = f"Use {self.pending_item.name} on:"
+            elif self.forced_switch:
+                prompt = "Choose next mascot!"
+            else:
+                prompt = "Switch to:"
+            selectable = self._get_selectable_party_indices()
 
             # Calculate menu dimensions
             menu_item_height = 16  # Reduced from 18 for compactness
@@ -787,12 +835,13 @@ class BattleScene:
             for i, mascot in enumerate(self.party):
                 y_offset = list_start_y + i * menu_item_height
                 is_fainted = self.party_states[i].get("fainted", False)
-                is_active = i == self.active_idx
-                is_selected = i == self.party_select_idx
+                # The active mascot is only off-limits when switching
+                is_active = i == self.active_idx and self.pending_item is None
+                is_selected = i == self.party_select_idx and i in selectable
 
                 # Determine color based on state
                 if is_fainted:
-                    color = GB_PALETTE[2]  # Grayed out
+                    color = GB_PALETTE[3] if is_selected else GB_PALETTE[2]
                     status = "FNT"
                 elif is_active:
                     color = GB_PALETTE[2]  # Can't switch to active
@@ -805,7 +854,7 @@ class BattleScene:
                     status = ""
 
                 # Draw cursor for selected
-                if is_selected and not is_fainted and not is_active:
+                if is_selected:
                     cursor_text = menu_font.render(">", True, GB_PALETTE[3])
                     surface.blit(cursor_text, (menu_x + menu_padding, y_offset))
 
