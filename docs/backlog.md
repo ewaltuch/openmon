@@ -6,7 +6,6 @@
 
 | # | Task | Size | Why now / notes |
 |---|------|------|-----------------|
-| 2.1 (rest) | Player prompt for which move to forget; XP bar | S | Auto-forgetting the oldest move is a gameplay wart |
 | 2.2 | Trainer AI (effective/high-power moves), line-of-sight challenge | M | Unblocks Milestone 3; rewards already done |
 | 2.6 | Save versioning and 3 slots | M | Do last in M2: save format now stable (map, money, level, xp) |
 | 1.1 (rest) | Pixel font; art for Gopher/Elephpant/Konqi | S-M | Blocked: needs a verified OFL font and artwork; can run in parallel any time |
@@ -23,7 +22,8 @@ None.
 **2.1 Progression: XP and levels**
 - State dicts carry `level`/`xp`; stats = species base (level 5) + `growth` per level; `learnset` (level -> move, newest 4 kept); wild levels in `wild_encounters`, trainer party entries may be `{name, level}`
 - XP split among live participants, trainer bonus x1.5, level-up messages with `levelup` SFX; old saves default to level 5 / xp 0
-- Not done: evolutions, move-forget prompt (oldest is replaced automatically), XP bar in the UI
+- Forget-a-move prompt (`STATE_FORGET`, `moves` names saved in state) and battle XP bar done
+- Not done: evolutions, XP bar on the Mascots screen
 
 **1.5 Battle feel**
 - Pokemon-like damage formula (seedable), typewriter text with blinking prompt, hit flash/shake via `BattleMessage.effect`

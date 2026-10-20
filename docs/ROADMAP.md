@@ -87,7 +87,7 @@ against something, covered by a test that loads every species.
 
 ## Milestone 2: A world to explore
 
-### 2.1 Progression: XP and levels (done)
+### 2.1 Progression: XP and levels (done, incl. forget-a-move prompt and XP bar)
 The biggest gap versus Pokemon Red/Blue: nothing grows. Add XP on win, levels,
 stat growth per species and learnsets in `mascots.yaml`. Saved party states gain
 `level`/`xp`; loading old saves defaults them.

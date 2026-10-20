@@ -96,12 +96,13 @@ Turn-based combat (`src/engine/battle_scene.py`) features:
 - **Item targeting**: consumables open the party menu (`pending_item`); revive targets fainted mascots and clears `fainted`
 - **Type effectiveness**: Rock-paper-scissors style matchups (Kernel > Shell, Browser > Editor, etc.)
 - **Capture mechanics**: Package item with probability based on opponent HP; party capped at `PARTY_MAX` (5, what the switch menu fits); beyond that captures go to the Repository (`STORAGE_MAX` 30; blocked with a message when both are full); duplicates allowed
+- **Move learning**: a full moveset (4) prompts via `STATE_FORGET` (the message carries `learn=(mascot, move)`; the new move is the last row, X declines). The chosen moveset is saved as `moves` (names) in the party state; `hydrate` falls back to the learnset-derived moves when absent. The player info box has an XP bar (`mascots.xp_fraction`)
 - **Party switching**: Can switch active mascot mid-battle if party has multiple members
 - **Trainer battles**: NPC-initiated battles against a multi-mascot opponent party (`is_trainer_battle=True`); captures are disabled and the opponent auto-switches on faint instead of the battle ending
 
 Battle flow: intro message -> Menu (2x2 grid: Fight/Item/Flee/Switch) -> action -> turn resolved and narrated via the message queue -> back to menu, forced switch, or battle end on the last message.
 
-Battle results reach the overworld through SceneManager attributes (see "Cross-scene state passing" above).
+Battle results reach the overworld through a `BattleResult` on the SceneManager (see "Cross-scene state passing" above).
 
 ### Inventory System
 
