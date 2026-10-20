@@ -81,7 +81,7 @@ against something, covered by a test that loads every species.
   seedable random factor (see `docs/design.md`).
 - Done: typewriter text and a blinking "▼" prompt; Z completes scrolling text
   first. Hit flash/shake via `BattleMessage.effect`.
-- Wild opponents keep picking moves at random; trainer AI comes in 2.2.
+- Wild opponents keep picking moves at random; trainers use the 2.2 AI.
 
 ---
 
@@ -92,9 +92,12 @@ The biggest gap versus Pokemon Red/Blue: nothing grows. Add XP on win, levels,
 stat growth per species and learnsets in `mascots.yaml`. Saved party states gain
 `level`/`xp`; loading old saves defaults them.
 
-### 2.2 Trainers that act like trainers
-- Move choice: prefer super-effective and high-power moves.
-- Line-of-sight challenge: a trainer spots you and walks up.
+### 2.2 Trainers that act like trainers (done)
+- Move choice: trainers pick the move with the highest expected damage (85% of
+  the time or more; `AI_RANDOM_CHANCE`), see `docs/design.md`.
+- Line-of-sight challenge: undefeated trainers spot you along their `facing`
+  within `sight` tiles (no wall or NPC between), show "!", walk up, then talk
+  and battle. Input is locked meanwhile.
 - Rewards (money, see 2.4) on win.
 
 ### 2.3 Multiple maps and warps (done)

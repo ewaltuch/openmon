@@ -52,6 +52,9 @@ DAMAGE_SCALE = 0.7
 DAMAGE_RANDOM = (0.85, 1.0)
 # Own generator so tests can seed damage without disturbing other randomness
 damage_rng = random.Random()
+# Trainer move choice: odds of picking a random move instead of the best one
+AI_RANDOM_CHANCE = 0.15
+ai_rng = random.Random()  # seedable in tests
 
 BOX_H = 48
 BOX_Y = SCREEN_HEIGHT - BOX_H
@@ -286,6 +289,23 @@ class BattleScene:
         base = move.power * attacker.atk / max(1, defender.defense) * DAMAGE_SCALE
         dmg = int(base * multiplier * damage_rng.uniform(*DAMAGE_RANDOM))
         return max(1, dmg), multiplier
+
+    def _expected_damage(self, move, attacker, defender):
+        """Average damage of a move (no random roll), as `_calc_damage` computes it."""
+        multiplier = TYPE_EFFECTIVENESS.get((move.type, defender.type), 1.0)
+        base = move.power * attacker.atk / max(1, defender.defense) * DAMAGE_SCALE
+        return max(1.0, base * multiplier * sum(DAMAGE_RANDOM) / 2)
+
+    def _choose_opponent_move(self):
+        """Wild: random. Trainer: best expected damage, rarely a random move."""
+        moves = self.opponent.moves
+        if not self.is_trainer_battle:
+            return random.choice(moves)
+        if ai_rng.random() < AI_RANDOM_CHANCE:
+            return ai_rng.choice(moves)
+        return max(
+            moves, key=lambda m: self._expected_damage(m, self.opponent, self.player)
+        )
 
     def _attack(self, attacker, defender, move):
         """Apply one attack and narrate it."""
@@ -607,7 +627,7 @@ class BattleScene:
             self._say(f"{mascot.name} learned {new.name}!")
 
     def _opponent_attack(self):
-        move = random.choice(self.opponent.moves)
+        move = self._choose_opponent_move()
         self._attack(self.opponent, self.player, move)
         if self.player.hp <= 0:
             self.party_states[self.active_idx]["fainted"] = True

@@ -6,18 +6,20 @@
 
 | # | Task | Size | Why now / notes |
 |---|------|------|-----------------|
-| 2.2 | Trainer AI (effective/high-power moves), line-of-sight challenge | M | Unblocks Milestone 3; rewards already done |
 | 2.6 | Save versioning and 3 slots | M | Do last in M2: save format now stable (map, money, level, xp) |
 | 1.1 (rest) | Pixel font; art for Gopher/Elephpant/Konqi | S-M | Blocked: needs a verified OFL font and artwork; can run in parallel any time |
 
-Then Milestone 3 (gyms), which needs 2.2 and 2.6. Parallelism: 2.2 and 2.5 touch
-different files and can run together; 2.6 should follow them.
+Then Milestone 3 (gyms), which needs 2.6.
 
 ## In progress
 
 None.
 
 ## Done
+
+**2.2 Trainers that act like trainers**
+- Trainer move AI by expected damage (`BattleScene._choose_opponent_move`, `ai_rng`/`AI_RANDOM_CHANCE` seedable); wild stays random
+- Line of sight: NPC `facing` (default down) and `sight` (default 4) in map YAML; `OverworldScene.challenge` runs alert ("!"), approach walk, then the normal dialogue and battle; a trainer that loses to you returns home
 
 **2.1 Progression: XP and levels**
 - State dicts carry `level`/`xp`; stats = species base (level 5) + `growth` per level; `learnset` (level -> move, newest 4 kept); wild levels in `wild_encounters`, trainer party entries may be `{name, level}`

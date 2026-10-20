@@ -59,3 +59,17 @@ Each species has 3-4 moves; move types may differ from the species type.
 common, Elephpant rarest). A map YAML can define its own `encounters` list;
 maps without one (the town) use the default. Route 1 favors Gopher and
 Elephpant.
+
+## Trainer AI and challenges
+
+In a trainer battle the opponent scores each move by expected damage (the
+`_calc_damage` formula with the random factor at its mean: power, attack /
+defense, type multiplier) and plays the best one. With 15% probability
+(`AI_RANDOM_CHANCE`) it picks a uniformly random move instead, so it is not
+fully predictable. Wild opponents always pick at random.
+
+Undefeated trainers have a `facing` (up/down/left/right, default down) and a
+`sight` range in tiles (default 4) in map YAML. When the player stands in that
+line within range, with no wall or other NPC between, the trainer shows "!",
+walks to the tile next to the player, and the usual dialogue and battle follow.
+Defeated trainers never challenge.

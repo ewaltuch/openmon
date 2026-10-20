@@ -9,6 +9,7 @@ from PIL import Image, ImageDraw
 
 from src.constants import DEFAULT_MAP, GB_PALETTE, SCREEN_HEIGHT, SCREEN_WIDTH
 from src.overworld import (
+    DIRECTIONS,
     GRASS,
     KEY_DIRECTIONS,
     TILE_SIZE,
@@ -24,6 +25,9 @@ from .maps import load_map, map_exists
 from .save import SaveManager
 
 INTERACT_KEYS = (pygame.K_SPACE, pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER)
+ALERT_TIME = 0.6  # seconds a spotting trainer shows "!"
+APPROACH_STEP_TIME = 0.15  # seconds per tile while a trainer walks up
+OPPOSITE = {"left": "right", "right": "left", "up": "down", "down": "up"}
 FADE_TIME = 0.25  # seconds for each half (fade out, then fade in) of a warp
 
 
@@ -36,6 +40,61 @@ class OverworldScene:
             if (npc.x, npc.y) == (tx, ty):
                 return npc
         return None
+
+    def trainer_distance_to_player(self, npc):
+        """Tiles from npc to the player if the npc sees them, else None.
+
+        The player must be in the npc's facing line within `npc.sight` tiles,
+        with no wall or other NPC in between.
+        """
+        dx, dy = DIRECTIONS[npc.facing]
+        for dist in range(1, npc.sight + 1):
+            tx, ty = npc.x + dx * dist, npc.y + dy * dist
+            if not self.tilemap.is_walkable(tx, ty):
+                return None
+            if (tx, ty) == self.player.tile:
+                return dist
+            if self.npc_at(tx, ty) is not None:
+                return None
+        return None
+
+    def _check_sight(self):
+        """Start a challenge if an undefeated trainer spots the player."""
+        for npc in self.npcs:
+            if not npc.is_trainer():
+                continue
+            dist = self.trainer_distance_to_player(npc)
+            if dist is not None:
+                self.challenge = {
+                    "npc": npc,
+                    "phase": "alert",
+                    "t": 0.0,
+                    "steps": dist - 1,
+                }
+                return
+
+    def _update_challenge(self, dt):
+        """Alert ("!"), walk up to the player, then open the trainer dialogue."""
+        ch = self.challenge
+        npc = ch["npc"]
+        ch["t"] += dt
+        if ch["phase"] == "alert":
+            if ch["t"] < ALERT_TIME:
+                return
+            ch["phase"], ch["t"] = "walk", 0.0
+        if ch["phase"] == "walk":
+            while ch["steps"] > 0 and ch["t"] >= APPROACH_STEP_TIME:
+                ch["t"] -= APPROACH_STEP_TIME
+                dx, dy = DIRECTIONS[npc.facing]
+                npc.x += dx
+                npc.y += dy
+                ch["steps"] -= 1
+            if ch["steps"] > 0:
+                return
+        self.challenge = None
+        self.player.facing = OPPOSITE[npc.facing]
+        self.active_npc = npc
+        self.active_dialogue = npc.talk()
 
     def npc_collides(self, x, y):
         # Check if the tile at pixel (x, y) is occupied by an NPC
@@ -63,6 +122,7 @@ class OverworldScene:
         self.steps = 0
         self.encounter_steps = random.randint(10, 20)
         self._pending_trainer = None
+        self.challenge = None  # trainer spotting/approaching the player
         self.active_dialogue = None
         self.active_npc = None
         self.npcs = []
@@ -113,6 +173,7 @@ class OverworldScene:
             self.player.facing = facing
         self.active_dialogue = None
         self.active_npc = None
+        self.challenge = None
         self.steps = 0
         self._update_camera()
 
@@ -442,7 +503,11 @@ class OverworldScene:
                     self.is_paused = False
             return
 
-        if event.type == pygame.KEYDOWN and not self.active_dialogue:
+        if (
+            event.type == pygame.KEYDOWN
+            and not self.active_dialogue
+            and not self.challenge
+        ):
             if event.key == pygame.K_m:
                 audio.toggle_mute()
             elif event.key == pygame.K_s:
@@ -551,6 +616,10 @@ class OverworldScene:
                 if result.won:
                     self._pending_trainer.defeated = True
                     self._sync_defeated()
+                else:  # back to the post it walked away from
+                    self._pending_trainer.x, self._pending_trainer.y = (
+                        self._pending_trainer.home
+                    )
                 self._pending_trainer = None
 
         # The synced battle party already includes the capture; only add it
@@ -582,9 +651,16 @@ class OverworldScene:
             self._update_fade(dt)
             return
 
-        # The player stands still while talking
+        # The player stands still while talking or being challenged
         if self.active_dialogue:
             return
+        if self.challenge:
+            self._update_challenge(dt)
+            return
+        if not self.player.moving:
+            self._check_sight()
+            if self.challenge:
+                return
 
         # Grid movement: a held arrow key starts a one-tile step
         if not self.player.moving:
@@ -645,6 +721,16 @@ class OverworldScene:
                     (px + TILE_SIZE // 2, py + TILE_SIZE // 2),
                     TILE_SIZE // 2,
                 )
+        if self.challenge and self.challenge["phase"] == "alert":
+            npc = self.challenge["npc"]
+            mark = get_font(12).render("!", True, GB_PALETTE[3])
+            surface.blit(
+                mark,
+                (
+                    npc.x * TILE_SIZE - self.camera_x + 2,
+                    npc.y * TILE_SIZE - self.camera_y - 12,
+                ),
+            )
         # Draw dialogue box if active
         if self.active_dialogue:
             font = get_font(12)
