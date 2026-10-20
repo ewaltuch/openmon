@@ -8,13 +8,18 @@
 |---|------|-------|
 | 1.1 (rest) | Pixel font; real sprites for Gopher/Elephpant/Konqi | No verified OFL font source yet |
 
-Then Milestone 2, starting with **2.1 Progression (XP and levels)**.
+Then Milestone 2, continuing with 2.2 (trainers) and 2.3 (maps).
 
 ## In progress
 
 None.
 
 ## Done
+
+**2.1 Progression: XP and levels**
+- State dicts carry `level`/`xp`; stats = species base (level 5) + `growth` per level; `learnset` (level -> move, newest 4 kept); wild levels in `wild_encounters`, trainer party entries may be `{name, level}`
+- XP split among live participants, trainer bonus x1.5, level-up messages with `levelup` SFX; old saves default to level 5 / xp 0
+- Not done: evolutions, move-forget prompt (oldest is replaced automatically), XP bar in the UI
 
 **1.5 Battle feel**
 - Pokemon-like damage formula (seedable), typewriter text with blinking prompt, hit flash/shake via `BattleMessage.effect`

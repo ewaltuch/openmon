@@ -67,7 +67,12 @@ def _draw_party_rows(surface, party, cursor=None, top=18, row_h=26):
         color = GB_PALETTE[3] if i == cursor else GB_PALETTE[2]
         marker = ">" if i == cursor else " "
         status = " (fainted)" if s.get("fainted") else ""
-        surface.blit(font.render(f"{marker}{s['name']}{status}", True, color), (6, y))
+        surface.blit(
+            font.render(
+                f"{marker}{s['name']} Lv{s.get('level', 5)}{status}", True, color
+            ),
+            (6, y),
+        )
         hp = f"{s['hp']}/{s['max_hp']}"
         surface.blit(font.render(hp, True, color), (240 - 6 - font.size(hp)[0], y))
         bar = pygame.Rect(14, y + 13, 212, 5)

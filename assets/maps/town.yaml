@@ -32,7 +32,7 @@ npcs:
     reward: 60
     party:
       - "BSD Daemon"
-      - "Tux"
+      - {name: Tux, level: 6}
     dialogue:
       - "Hey! I'm a trainer!"
       - "Let's battle!"

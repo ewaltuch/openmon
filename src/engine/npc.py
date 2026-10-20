@@ -30,7 +30,7 @@ class NPC:
         )  # Fallback to regular dialogue if none provided
         self.dialogue_idx = 0
         self.trainer = trainer
-        self.party = party or []  # List of mascot names for trainers
+        self.party = party or []  # Mascot names or {name, level} for trainers
         self.defeated = defeated  # Track if trainer has been beaten
         self.heals = heals  # Restores the party after talking
         self.reward = reward  # Money awarded for beating this trainer

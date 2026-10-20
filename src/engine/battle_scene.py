@@ -73,6 +73,7 @@ class BattleScene:
         is_trainer_battle=False,
         wild_species=None,
         reward=0,
+        wild_level=None,
     ):
         self.manager = manager
         self.is_trainer_battle = is_trainer_battle
@@ -120,7 +121,9 @@ class BattleScene:
             # Wild encounter
             if wild_species is None:
                 wild_species = mascots.roll_wild_encounter()
-            self.opponent = self.make_mascot(wild_species)
+            if wild_level is None:
+                wild_level = mascots.wild_level(wild_species)
+            self.opponent = self.make_mascot(wild_species, wild_level)
             self.opponent_party = [self.opponent]
             self._say(f"A wild {self.opponent.name} appeared!")
 
@@ -135,6 +138,8 @@ class BattleScene:
         self.forced_switch = False
         self.inventory = inventory
         self.pending_item = None
+        # Party indices that have fought the current opponent (they share XP)
+        self._participants = {self.active_idx}
 
     @property
     def msg(self):
@@ -190,11 +195,11 @@ class BattleScene:
         return names
 
     # Thin wrappers over the species registry (src/engine/mascots.py)
-    def make_mascot(self, name):
-        return mascots.make_mascot(name)
+    def make_mascot(self, name, level=None):
+        return mascots.make_mascot(name, level)
 
-    def make_mascot_state(self, name, hp=None):
-        return mascots.make_state(name, hp)
+    def make_mascot_state(self, name, hp=None, level=None):
+        return mascots.make_state(name, hp, level)
 
     def hydrate_mascot(self, state):
         return mascots.hydrate(state)
@@ -208,6 +213,8 @@ class BattleScene:
             states.append(
                 {
                     "name": mascot.name,
+                    "level": mascot.level,
+                    "xp": mascot.xp,
                     "hp": mascot.hp,
                     "max_hp": mascot.max_hp,
                     "atk": mascot.atk,
@@ -278,6 +285,7 @@ class BattleScene:
         """Execute a party switch to the given index."""
         self.active_idx = new_idx
         self.player = self.party[self.active_idx]
+        self._participants.add(new_idx)
         self._say(f"Go, {self.player.name}!")
         self.state = self.STATE_MENU
 
@@ -285,12 +293,10 @@ class BattleScene:
         """Hand the outcome to the overworld and leave the battle."""
         if self._check_all_fainted():
             # Revive all mascots for overworld
-            revived_states = []
-            for state in self.party_states:
-                revived_state = state.copy()
-                revived_state["hp"] = revived_state["max_hp"]
-                revived_state["fainted"] = False
-                revived_states.append(revived_state)
+            revived_states = self.get_party_states()
+            for state in revived_states:
+                state["hp"] = state["max_hp"]
+                state["fainted"] = False
             self.manager.last_battle_party_states = revived_states
             self.manager.battle_loss_reset = True
         else:
@@ -475,6 +481,7 @@ class BattleScene:
 
     def _on_opponent_fainted(self):
         self._say(f"{self.opponent.name} fainted!", "faint")
+        self._award_xp(self.opponent)
         next_opponent = next((m for m in self.opponent_party if m.hp > 0), None)
         if next_opponent is None:
             if self.is_trainer_battle:
@@ -482,7 +489,57 @@ class BattleScene:
             self.battle_over = True
         else:
             self.opponent = next_opponent
+            self._participants = {self.active_idx}
             self._say(f"Trainer sent out {self.opponent.name}!")
+
+    def _award_xp(self, defeated):
+        """Share the defeated mascot's XP among the mascots that fought it."""
+        total = mascots.xp_yield(defeated.name, defeated.level, self.is_trainer_battle)
+        winners = [
+            i
+            for i in sorted(self._participants)
+            if not self.party_states[i].get("fainted", False)
+        ]
+        if not winners:
+            return
+        share = max(1, total // len(winners))
+        for i in winners:
+            mascot = self.party[i]
+            self._say(f"{mascot.name} gained {share} XP!")
+            self._gain_xp(mascot, share)
+
+    def _gain_xp(self, mascot, amount):
+        """Add XP, applying every level-up it pays for (narrated)."""
+        mascot.xp += amount
+        while mascot.level < mascots.MAX_LEVEL:
+            need = mascots.xp_to_next(mascot.level)
+            if mascot.xp < need:
+                break
+            mascot.xp -= need
+            self._level_up(mascot)
+        if mascot.level >= mascots.MAX_LEVEL:
+            mascot.xp = 0
+
+    def _level_up(self, mascot):
+        mascot.level += 1
+        stats = mascots.stats_at(mascot.name, mascot.level)
+        gained = stats["hp"] - mascot.max_hp
+        mascot.max_hp = stats["hp"]
+        if mascot.hp > 0:
+            mascot.hp = min(mascot.max_hp, mascot.hp + max(0, gained))
+        mascot.atk = stats["atk"]
+        mascot.defense = stats["defense"]
+        mascot.spd = stats["spd"]
+        self._say(f"{mascot.name} grew to level {mascot.level}!", "levelup")
+        for move in mascots.moves_learned_at(mascot.name, mascot.level):
+            if any(m.name == move["name"] for m in mascot.moves):
+                continue
+            new = Move(move["name"], move["power"], move["type"])
+            if len(mascot.moves) >= mascots.MAX_MOVES:
+                old = mascot.moves.pop(0)
+                self._say(f"{mascot.name} forgot {old.name}!")
+            mascot.moves.append(new)
+            self._say(f"{mascot.name} learned {new.name}!")
 
     def _opponent_attack(self):
         move = random.choice(self.opponent.moves)
@@ -576,7 +633,9 @@ class BattleScene:
             self.captured = True
 
             # The captured mascot joins at full HP, not with its battle damage
-            captured_state = self.make_mascot_state(self.opponent.name)
+            captured_state = self.make_mascot_state(
+                self.opponent.name, level=self.opponent.level
+            )
             self.party.append(self.hydrate_mascot(captured_state))
             self.party_states.append(captured_state)
 
@@ -605,7 +664,8 @@ class BattleScene:
         small = get_font(10)
         surface.blit(font.render(mascot.name, True, GB_PALETTE[3]), (x, y))
         surface.blit(
-            small.render(f"[{mascot.type}]", True, GB_PALETTE[2]), (x, y + LINE_H)
+            small.render(f"[{mascot.type}] Lv{mascot.level}", True, GB_PALETTE[2]),
+            (x, y + LINE_H),
         )
         bar_w, bar_h = 64, 6
         bar_y = y + 2 * LINE_H + 2
@@ -802,7 +862,7 @@ class BattleScene:
             # Draw name (shortened to fit better)
             name_x = menu_x + menu_padding + 12
             name_text = menu_font.render(
-                mascot.name[:12], True, color
+                f"{mascot.name[:10]} L{mascot.level}", True, color
             )  # Truncate long names
             surface.blit(name_text, (name_x, y_offset))
 

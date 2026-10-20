@@ -255,7 +255,9 @@ def test_turn_is_narrated_in_order_with_hp_snapshots():
 
 def test_faster_opponent_attacks_first():
     party = [BattleScene(DummyManager()).make_mascot_state("BSD Daemon")]  # spd 5
-    scene = BattleScene(DummyManager(), party_states=party, wild_species="Octocat")
+    scene = BattleScene(
+        DummyManager(), party_states=party, wild_species="Octocat", wild_level=5
+    )
     scene.messages.clear()
     with patch(
         "src.engine.battle_scene.random.choice", return_value=Move("PR", 5, "Editor")
@@ -266,7 +268,9 @@ def test_faster_opponent_attacks_first():
 
 def test_fainted_player_does_not_attack_after_faster_opponent():
     party = [BattleScene(DummyManager()).make_mascot_state("BSD Daemon", hp=1)]
-    scene = BattleScene(DummyManager(), party_states=party, wild_species="Octocat")
+    scene = BattleScene(
+        DummyManager(), party_states=party, wild_species="Octocat", wild_level=5
+    )
     opponent_hp = scene.opponent.hp
     scene._player_attack(0)
     assert scene.opponent.hp == opponent_hp
@@ -344,9 +348,9 @@ def test_every_species_loads_and_type_chart_is_full():
     assert len(SPECIES) >= 6
     for name, data in SPECIES.items():
         assert make_mascot(name).name == name
-        assert 3 <= len(data["moves"]) <= 4
+        assert 3 <= len(make_mascot(name).moves) <= 4
         assert data["type"] in ELEMENT_TYPES
-        for move in data["moves"]:
+        for move in data["learnset"]:
             assert move["type"] in ELEMENT_TYPES
     assert {d["type"] for d in SPECIES.values()} == set(ELEMENT_TYPES)
     for t in ELEMENT_TYPES:
