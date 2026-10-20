@@ -83,7 +83,7 @@ The overworld (`src/engine/overworld_scene.py` and `src/overworld.py`) consists 
 - **Party system**: List of mascot state dicts (built via `mascots.make_state`, which includes `level`/`xp`) that persists across battles and saves
 - **Maps and warps**: `assets/maps/<id>.csv` + `<id>.yaml` (spawn, warps, NPCs, optional `encounters`), loaded by `src/engine/maps.py` (`load_map`). Stepping on a warp tile fades out/in via `OverworldScene.start_warp`/`enter_map`; maps without `encounters` fall back to `wild_encounters` in `mascots.yaml`. Maps: `town`, `route1`
 
-NPCs are loaded from each map's YAML (`assets/maps/*.yaml`) with position, sprite reference, and multi-line dialogue sequences. NPCs can also be trainers (`trainer: true` with a `party` list of mascot names or `{name, level}` entries, and optional `reward` money): talking to an undefeated trainer starts a battle (`is_trainer_battle=True` on `BattleScene`) against their party instead of a dialogue-only interaction. Defeated state persists per-NPC and is saved/restored like the rest of game state. NPCs with `heals: true` (Linus) fully heal the party when their dialogue ends. NPCs with `shop: true` and a `stock` list (Grace) open a `ShopScreen` after dialogue.
+NPCs are loaded from each map's YAML (`assets/maps/*.yaml`) with position, sprite reference, and multi-line dialogue sequences. NPCs can also be trainers (`trainer: true` with a `party` list of mascot names or `{name, level}` entries, and optional `reward` money): talking to an undefeated trainer starts a battle (`is_trainer_battle=True` on `BattleScene`) against their party instead of a dialogue-only interaction. Defeated state persists per-NPC and is saved/restored like the rest of game state. Trainers have `facing` (default `down`) and `sight` (tiles, default 4) in map YAML: when an undefeated trainer has the player in its facing line within range and no wall/NPC between, `OverworldScene.challenge` runs ("!", walk up, then the normal dialogue and battle) with input locked; `NPC.home` is where a trainer returns after beating you. NPCs with `heals: true` (Linus) fully heal the party when their dialogue ends. NPCs with `shop: true` and a `stock` list (Grace) open a `ShopScreen` after dialogue.
 
 ### Battle System
 
@@ -91,6 +91,7 @@ Turn-based combat (`src/engine/battle_scene.py`) features:
 
 - **Species registry** (`src/engine/mascots.py` + `assets/mascots.yaml`): species stats/moves/placeholder sprites, `TYPE_EFFECTIVENESS`, `wild_encounters`. `make_state`, `hydrate`, `make_mascot`, cached `get_sprite(name, scale)`. Unknown species raise `ValueError`. `BattleScene.make_mascot*`/`hydrate_mascot` are thin wrappers kept for callers/tests; `Mascot`, `Move`, `TYPE_EFFECTIVENESS` are re-exported from `battle_scene`
 - **Message queue**: turn logic resolves immediately (HP changes at once), and every step is queued with `_say(text)` as a `BattleMessage` (text + HP snapshot) that the player advances with Z; `draw()` shows the snapshot of the current message. After the queue empties the scene goes to `_next_state` or finishes the battle. `self.msg = ...` is for one-off status lines outside a turn; `msg` reads the latest text either way
+- **Opponent move choice**: wild opponents pick randomly; trainers pick the best expected damage (`_choose_opponent_move`), with an `AI_RANDOM_CHANCE` random pick (`ai_rng`, seedable)
 - **Turn order**: higher `spd` acts first (ties: player)
 - **Item targeting**: consumables open the party menu (`pending_item`); revive targets fainted mascots and clears `fainted`
 - **Type effectiveness**: Rock-paper-scissors style matchups (Kernel > Shell, Browser > Editor, etc.)
@@ -164,6 +165,7 @@ Tests are organized by module:
 - `test_party_ui.py` - Party/switch menu rendering and selection
 - `test_trainer_battle.py` - Trainer battle flow (multi-mascot opponent, no capture)
 - `test_trainer_persistence.py` - Defeated-trainer state saved/restored
+- `test_trainer_ai.py` - Trainer move AI, line-of-sight challenge
 - `test_sprites.py` - SVG pipeline, species/NPC/player sprites
 - `test_audio.py` - audio no-ops, mute, battle sounds
 - `test_menus.py` - title, credits, party and bag screens

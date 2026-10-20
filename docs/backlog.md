@@ -8,7 +8,6 @@
 |---|------|------|-----------------|
 | 1.3 (rest) | Apply saved `muted` at launch; verify `beepbox2wav.py` | S | Small bug-class fix: mute only applies after loading |
 | 2.1 (rest) | Player prompt for which move to forget; XP bar | S | Auto-forgetting the oldest move is a gameplay wart |
-| 2.2 | Trainer AI (effective/high-power moves), line-of-sight challenge | M | Unblocks Milestone 3; rewards already done |
 | 2.5 | Repository storage box | M | Captures past 5 are currently blocked; touches party/battle capture |
 | 2.3 (rest) | Interior map (house/shop) and a second trainer | S | Content, exercises warps; cheap |
 | 2.6 | Save versioning and 3 slots | M | Do last in M2: save format now stable (map, money, level, xp) |
@@ -24,6 +23,10 @@ Tech debt worth doing soon: replace the ad-hoc `SceneManager` result attributes
 None.
 
 ## Done
+
+**2.2 Trainers that act like trainers**
+- Trainer move AI by expected damage (`BattleScene._choose_opponent_move`, `ai_rng`/`AI_RANDOM_CHANCE` seedable); wild stays random
+- Line of sight: NPC `facing` (default down) and `sight` (default 4) in map YAML; `OverworldScene.challenge` runs alert ("!"), approach walk, then the normal dialogue and battle; a trainer that loses to you returns home
 
 **2.1 Progression: XP and levels**
 - State dicts carry `level`/`xp`; stats = species base (level 5) + `growth` per level; `learnset` (level -> move, newest 4 kept); wild levels in `wild_encounters`, trainer party entries may be `{name, level}`

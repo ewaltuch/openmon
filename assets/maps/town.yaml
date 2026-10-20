@@ -29,6 +29,8 @@ npcs:
     y: 10
     sprite: trainer
     trainer: true
+    facing: down
+    sight: 4
     reward: 60
     party:
       - "BSD Daemon"

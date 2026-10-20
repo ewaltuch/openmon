@@ -18,11 +18,14 @@ class NPC:
         reward=0,
         shop=False,
         stock=None,
+        facing="down",
+        sight=4,
     ):
         self.id = id
         self.name = name
         self.x = x
         self.y = y
+        self.home = (x, y)  # where a trainer returns to after walking up
         self.sprite = sprite
         self.dialogue = dialogue
         self.defeated_dialogue = (
@@ -36,6 +39,8 @@ class NPC:
         self.reward = reward  # Money awarded for beating this trainer
         self.shop = shop  # Opens a ShopScreen after talking
         self.stock = stock or []  # Item ids on sale
+        self.facing = facing  # Direction a trainer looks (and spots you along)
+        self.sight = sight  # Tiles a trainer can see ahead
 
     def talk(self):
         # Use defeated dialogue if trainer has been beaten
