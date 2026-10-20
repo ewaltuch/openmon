@@ -12,7 +12,13 @@ from collections import deque, namedtuple
 
 import pygame
 
-from src.constants import GB_PALETTE, PARTY_MAX, SCREEN_HEIGHT, SCREEN_WIDTH
+from src.constants import (
+    GB_PALETTE,
+    PARTY_MAX,
+    SCREEN_HEIGHT,
+    SCREEN_WIDTH,
+    STORAGE_MAX,
+)
 from src.engine import audio, mascots
 from src.engine.battle_result import BattleResult
 from src.engine.fonts import get_font, wrap_text
@@ -75,8 +81,12 @@ class BattleScene:
         wild_species=None,
         reward=0,
         wild_level=None,
+        storage_states=None,
     ):
         self.manager = manager
+        # Repository contents; captures with a full party are added here
+        self.storage_states = list(storage_states or [])
+        self.captured_to_storage = False
         self.is_trainer_battle = is_trainer_battle
         self.reward = reward  # Money for a win (trainer battles)
         audio.play_music("battle")
@@ -306,6 +316,8 @@ class BattleScene:
                 result.reward = self.reward
         if self.captured:
             result.captured_name = self.opponent.name
+            result.storage_states = self.storage_states
+            result.captured_to_storage = self.captured_to_storage
         self.manager.battle_result = result
         audio.play_music("overworld")
         self.manager.pop()
@@ -621,8 +633,9 @@ class BattleScene:
             self.msg = "No packages available!"
             return
 
-        if len(self.party) >= PARTY_MAX:
-            self.msg = "Your party is full!"
+        party_full = len(self.party) >= PARTY_MAX
+        if party_full and len(self.storage_states) >= STORAGE_MAX:
+            self.msg = "Party and Repository are full!"
             return
 
         # Consume a package
@@ -638,8 +651,13 @@ class BattleScene:
             captured_state = self.make_mascot_state(
                 self.opponent.name, level=self.opponent.level
             )
-            self.party.append(self.hydrate_mascot(captured_state))
-            self.party_states.append(captured_state)
+            if party_full:
+                self.storage_states.append(captured_state)
+                self.captured_to_storage = True
+                self._say(f"{self.opponent.name} was sent to the Repository!")
+            else:
+                self.party.append(self.hydrate_mascot(captured_state))
+                self.party_states.append(captured_state)
 
             self.battle_over = True
         else:

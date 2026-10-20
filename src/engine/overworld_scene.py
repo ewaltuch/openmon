@@ -52,6 +52,7 @@ class OverworldScene:
         self._maps = {}
         # Initialize party as state dictionaries
         self.party = self._initialize_party(["Tux", "BSD Daemon"])
+        self.storage = []  # Repository: states beyond the party
         self.player = Player(
             0,
             0,
@@ -81,6 +82,7 @@ class OverworldScene:
             "Continue",
             "Mascots",
             "Bag",
+            "Repository",
             "Save",
             "Load",
             "Toggle Hints",
@@ -312,6 +314,7 @@ class OverworldScene:
                 "map": self.map.id,
                 "player": {"x": self.player.x, "y": self.player.y},
                 "party": self.party,
+                "storage": self.storage,
                 "inventory": self.inventory.to_dict(),
                 "money": self.inventory.money,
                 "defeated_npcs": dict(self.defeated_trainers),
@@ -378,7 +381,14 @@ class OverworldScene:
                         self.party = self._initialize_party(["Tux"])
                         break
 
-            for state in self.party:
+            # Old saves have no storage; drop entries of unknown species
+            self.storage = [
+                s
+                for s in data.get("storage", [])
+                if isinstance(s, dict) and s.get("name") in mascots.SPECIES
+            ]
+
+            for state in self.party + self.storage:
                 mascots.normalize_state(state)  # old saves: level 5, xp 0
 
             audio.set_muted(data.get("muted", False))
@@ -461,6 +471,7 @@ class OverworldScene:
                             self.manager,
                             party_states=self.party,
                             inventory=self.inventory,
+                            storage_states=self.storage,
                             opponent_party=trainer_party,
                             is_trainer_battle=True,
                             reward=self.active_npc.reward,
@@ -501,6 +512,10 @@ class OverworldScene:
             from .menu_screens import BagScreen
 
             self.manager.push(BagScreen(self.manager, self.party, self.inventory))
+        elif selected_option == "Repository":
+            from .menu_screens import RepositoryScreen
+
+            self.manager.push(RepositoryScreen(self.manager, self.party, self.storage))
         elif selected_option == "Save":
             self._save_game()
             self.is_paused = False
@@ -517,6 +532,8 @@ class OverworldScene:
 
     def _apply_battle_result(self, result):
         """Apply a BattleResult: party sync, loss reset, reward, trainer, capture."""
+        if result.storage_states is not None:
+            self.storage = result.storage_states
         if result.party_states:
             self.party = result.party_states
 
@@ -538,7 +555,11 @@ class OverworldScene:
 
         # The synced battle party already includes the capture; only add it
         # when no party sync came with the result
-        if result.captured_name and not result.party_states:
+        if (
+            result.captured_name
+            and not result.party_states
+            and not result.captured_to_storage
+        ):
             self.party.extend(self._initialize_party([result.captured_name]))
 
     def update(self, dt):
@@ -601,6 +622,7 @@ class OverworldScene:
                     self.manager,
                     party_states=self.party,
                     inventory=self.inventory,
+                    storage_states=self.storage,
                     wild_species=mascots.roll_wild_encounter(table=self.map.encounters),
                 )
             )

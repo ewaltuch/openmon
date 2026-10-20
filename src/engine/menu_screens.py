@@ -8,7 +8,7 @@ picked up by the next save.
 
 import pygame
 
-from src.constants import GB_PALETTE
+from src.constants import GB_PALETTE, PARTY_MAX, STORAGE_MAX
 from src.engine.fonts import get_font, wrap_text
 from src.engine.inventory import Item, get_item
 
@@ -358,3 +358,113 @@ class ShopScreen:
             surface.blit(font.render("Up/Down: amount  Z: ok", True, mid), (6, 138))
         elif self.message:
             surface.blit(font.render(self.message, True, dark), (6, 144))
+
+
+def deposit(party, storage, idx):
+    """Move party[idx] into storage. Returns (ok, message)."""
+    if not 0 <= idx < len(party):
+        return False, "Nothing to deposit."
+    if len(storage) >= STORAGE_MAX:
+        return False, "The Repository is full!"
+    if not any(
+        not s.get("fainted") and s["hp"] > 0 for i, s in enumerate(party) if i != idx
+    ):
+        return False, "Keep a healthy mascot!"
+    state = party.pop(idx)
+    storage.append(state)
+    return True, f"{state['name']} was deposited."
+
+
+def withdraw(party, storage, idx):
+    """Move storage[idx] into the party. Returns (ok, message)."""
+    if not 0 <= idx < len(storage):
+        return False, "Nothing to withdraw."
+    if len(party) >= PARTY_MAX:
+        return False, "Your party is full!"
+    state = storage.pop(idx)
+    party.append(state)
+    return True, f"{state['name']} joined the party."
+
+
+class RepositoryScreen:
+    """Two panels (party / Repository); Z moves the selected mascot across."""
+
+    ROWS = 10  # visible storage rows
+
+    def __init__(self, manager, party, storage):
+        self.manager = manager
+        self.party = party
+        self.storage = storage
+        self.side = 0  # 0 party, 1 storage
+        self.idx = [0, 0]
+        self.message = ""
+
+    def _list(self, side=None):
+        return (
+            self.party if (self.side if side is None else side) == 0 else self.storage
+        )
+
+    def _clamp(self):
+        for side in (0, 1):
+            self.idx[side] = max(0, min(self.idx[side], len(self._list(side)) - 1))
+
+    def handle_event(self, event):
+        if event.type != pygame.KEYDOWN:
+            return
+        key = event.key
+        if key in BACK_KEYS:
+            self.manager.pop()
+        elif key in (pygame.K_LEFT, pygame.K_RIGHT):
+            self.side = 0 if key == pygame.K_LEFT else 1
+            self.message = ""
+        elif key in (pygame.K_UP, pygame.K_DOWN) and self._list():
+            step = -1 if key == pygame.K_UP else 1
+            self.idx[self.side] = (self.idx[self.side] + step) % len(self._list())
+        elif key in CONFIRM_KEYS:
+            move = deposit if self.side == 0 else withdraw
+            _, self.message = move(self.party, self.storage, self.idx[self.side])
+            self._clamp()
+
+    def update(self, dt):
+        pass
+
+    def _draw_panel(self, surface, x, title, items, side):
+        font = get_font(10)
+        active = self.side == side
+        surface.blit(
+            font.render(title, True, GB_PALETTE[3] if active else GB_PALETTE[2]),
+            (x + 2, 14),
+        )
+        cursor = self.idx[side]
+        first = max(0, cursor - self.ROWS + 1)
+        for row, s in enumerate(items[first : first + self.ROWS]):
+            i = first + row
+            sel = active and i == cursor
+            color = GB_PALETTE[3] if sel else GB_PALETTE[2]
+            label = f"{'>' if sel else ' '}{s['name'][:9]} L{s.get('level', 5)}"
+            if s.get("fainted"):
+                label += "!"
+            surface.blit(font.render(label, True, color), (x + 2, 28 + row * 11))
+        if not items:
+            surface.blit(font.render("(empty)", True, GB_PALETTE[2]), (x + 8, 28))
+
+    def draw(self, surface):
+        surface.fill(GB_PALETTE[0])
+        _box(surface, (0, 0, 240, 160))
+        title = get_font(12).render("Repository", True, GB_PALETTE[3])
+        surface.blit(title, (6, 1))
+        pygame.draw.line(surface, GB_PALETTE[2], (120, 14), (120, 142))
+        self._draw_panel(
+            surface, 4, f"Party {len(self.party)}/{PARTY_MAX}", self.party, 0
+        )
+        self._draw_panel(
+            surface,
+            124,
+            f"Box {len(self.storage)}/{STORAGE_MAX}",
+            self.storage,
+            1,
+        )
+        pygame.draw.line(surface, GB_PALETTE[2], (0, 142), (240, 142))
+        font = get_font(10)
+        hint = self.message or "Z: move  X: back  </>: panel"
+        surface.blit(font.render(hint, True, GB_PALETTE[3]), (6, 146))
