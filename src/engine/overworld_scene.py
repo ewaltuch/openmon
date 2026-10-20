@@ -9,7 +9,15 @@ import pygame
 from PIL import Image, ImageDraw
 
 from src.constants import GB_PALETTE, SCREEN_HEIGHT, SCREEN_WIDTH, SPRITE_DIR
-from src.overworld import GRASS, KEY_DIRECTIONS, TILE_SIZE, Player, TileMap
+from src.overworld import (
+    GRASS,
+    KEY_DIRECTIONS,
+    TILE_SIZE,
+    Player,
+    TileMap,
+    load_overworld_sprite,
+    load_player_images,
+)
 
 from . import mascots
 from .fonts import get_font, wrap_text
@@ -40,7 +48,9 @@ class OverworldScene:
         self.party = self._initialize_party(["Tux", "BSD Daemon"])
         sx, sy = self.SPAWN_TILE
         self.player = Player(
-            sx * TILE_SIZE, sy * TILE_SIZE, [self._generate_player_sprite()]
+            sx * TILE_SIZE,
+            sy * TILE_SIZE,
+            load_player_images() or [self._generate_player_sprite()],
         )
         self.camera_x = 0
         self.camera_y = 0
@@ -479,16 +489,19 @@ class OverworldScene:
     def draw(self, surface):
         self.tilemap.draw(surface, self.camera_x, self.camera_y, self.tile_images)
         self.player.draw(surface, self.camera_x, self.camera_y)
-        # Draw NPCs (simple circle for now)
         for npc in self.npcs:
             px = npc.x * TILE_SIZE - self.camera_x
             py = npc.y * TILE_SIZE - self.camera_y
-            pygame.draw.circle(
-                surface,
-                GB_PALETTE[2],
-                (px + TILE_SIZE // 2, py + TILE_SIZE // 2),
-                TILE_SIZE // 2,
-            )
+            image = load_overworld_sprite(npc.sprite)
+            if image is not None:
+                surface.blit(image, (px, py))
+            else:  # No art for this sprite name: draw a circle
+                pygame.draw.circle(
+                    surface,
+                    GB_PALETTE[2],
+                    (px + TILE_SIZE // 2, py + TILE_SIZE // 2),
+                    TILE_SIZE // 2,
+                )
         # Draw dialogue box if active
         if self.active_dialogue:
             font = get_font(12)

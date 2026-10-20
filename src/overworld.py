@@ -3,8 +3,12 @@ Overworld MVP for Open-Mon: tile map, grid-based player movement, collision.
 """
 
 import csv
+import os
+from functools import lru_cache
 
 import pygame
+
+from src.constants import GB_PALETTE, SPRITE_DIR
 
 TILE_SIZE = 8
 
@@ -53,6 +57,29 @@ class TileMap:
                 surface.blit(img, (x * TILE_SIZE - camera_x, y * TILE_SIZE - camera_y))
 
 
+@lru_cache(maxsize=None)
+def load_overworld_sprite(name):
+    """8x8 overworld sprite from assets/sprites/overworld, or None if missing.
+
+    The lightest shade is treated as transparent.
+    """
+    path = os.path.join(SPRITE_DIR, "overworld", name + ".png")
+    if not os.path.exists(path):
+        return None
+    img = pygame.image.load(path)
+    if img.get_size() != (TILE_SIZE, TILE_SIZE):
+        return None
+    img = img.convert()
+    img.set_colorkey(GB_PALETTE[0])
+    return img
+
+
+def load_player_images():
+    """Facing -> sprite for the player, or None unless all four frames exist."""
+    frames = {d: load_overworld_sprite(f"player_{d}") for d in DIRECTIONS}
+    return frames if all(frames.values()) else None
+
+
 class Player:
     """Moves one tile at a time, sliding between tiles like Pokemon Red/Blue."""
 
@@ -60,11 +87,17 @@ class Player:
         self.x = x
         self.y = y
         self.images = images
-        self.image = images[0]
         self.rect = pygame.Rect(x, y, TILE_SIZE, TILE_SIZE)
         self.speed = 40  # px/sec, i.e. 5 tiles per second
         self.facing = "down"
         self.target = None  # Pixel position being walked to, if mid-step
+
+    @property
+    def image(self):
+        """Current frame: per-facing if images is a dict, else the first."""
+        if isinstance(self.images, dict):
+            return self.images[self.facing]
+        return self.images[0]
 
     @property
     def tile(self):
