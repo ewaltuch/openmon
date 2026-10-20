@@ -6,6 +6,8 @@ import pygame
 
 from src.constants import SCREEN_HEIGHT, SCREEN_WIDTH
 
+from . import audio
+from .save import SaveManager
 from .scene_manager import SceneManager
 from .scenes import TitleScene
 
@@ -20,6 +22,10 @@ class Game:
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Open-Mon")
         self.clock = pygame.time.Clock()
+        # Apply the saved mute setting before any music starts.
+        save = SaveManager.load()
+        if isinstance(save, dict):
+            audio.set_muted(save.get("muted", False))
         self.manager = SceneManager()
         self.manager.push(TitleScene(self.manager))
         self.running = True

@@ -22,7 +22,6 @@ GB_PALETTE = [
 ASSET_DIR = "assets/"
 SPRITE_DIR = ASSET_DIR + "sprites/"
 SFX_DIR = ASSET_DIR + "sfx/"
-MUSIC_DIR = ASSET_DIR + "music/"
 
 # Save path
 SAVE_PATH = ".openmon/save1.json"

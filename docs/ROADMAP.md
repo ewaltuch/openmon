@@ -58,14 +58,17 @@ NPC and the player have a real sprite.
 **Done when:** 6 species with 3–4 moves each, every type both strong and weak
 against something, covered by a test that loads every species.
 
-### 1.3 Audio (done; `beepbox2wav.py` unverified, apply saved mute at launch)
+### 1.3 Audio (done)
 - Small `src/engine/audio.py` wrapper around `pygame.mixer` that is a no-op
   when audio init fails (CI, no device).
 - Music per scene; SFX for menu move/confirm, hit, faint, capture.
 - Battle SFX hook into the message queue: add an optional `sound` to
   `BattleMessage` and play it when that message is shown.
 - `M` toggles mute; persist the setting in the save.
-- Verify `scripts/beepbox2wav.py` and add `music/` sources.
+- Saved mute is applied at launch (`Game.__init__` reads the save).
+- Music is generated in code (`audio.py`); there is no `music/` source dir.
+  The unused `beepbox2wav.py` wrapper (needed an external `beepbox-cli`) and
+  `MUSIC_DIR` were removed.
 
 ### 1.4 Title, credits and the bag (done)
 - Title menu: New Game / Continue (Continue only when a save exists).
