@@ -159,7 +159,9 @@ class OverworldScene:
         pygame.draw.rect(surface, GB_PALETTE[3], (hud_x, hud_y, hud_w, hud_h), 1)
 
         # Draw name and type
-        name_text = font.render(f"{active['name']}", True, GB_PALETTE[3])
+        name_text = font.render(
+            f"{active['name']} Lv{active.get('level', 5)}", True, GB_PALETTE[3]
+        )
         surface.blit(name_text, (hud_x + 4, hud_y + 2))
 
         # Draw HP
@@ -289,6 +291,9 @@ class OverworldScene:
                         self.party = self._initialize_party(["Tux"])
                         break
 
+            for state in self.party:
+                mascots.normalize_state(state)  # old saves: level 5, xp 0
+
             audio.set_muted(data.get("muted", False))
 
             if "inventory" in data:
@@ -373,7 +378,8 @@ class OverworldScene:
 
                         # Create trainer party states and hydrate to Mascot objects
                         trainer_party = [
-                            mascots.make_mascot(name) for name in self.active_npc.party
+                            mascots.make_mascot(*mascots.parse_party_entry(entry))
+                            for entry in self.active_npc.party
                         ]
                         battle = BattleScene(
                             self.manager,

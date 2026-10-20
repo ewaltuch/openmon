@@ -28,6 +28,18 @@ in tests). Move power matters in proportion, and atk against defense scales
 the whole hit. With current stats a typical neutral hit takes a quarter of a
 mascot's HP, so a KO takes roughly 3-8 hits (more against resisted types).
 
+## Progression
+
+Species stats in `assets/mascots.yaml` are the level-5 values; each level adds
+the species' `growth` (rounded). `xp` counts within the current level and
+`xp_to_next(level) = 3 * level^2`. Defeating a mascot yields
+`xp_yield * level / 5` (x1.5 from trainers), split among the party members
+that fought it and are still standing. A level-up raises HP by the max-HP gain.
+A `learnset` maps levels to moves; a mascot knows the newest 4, so learning a
+fifth forgets the oldest. Wild levels come from `wild_encounters` (`level` is a
+number or `[min, max]`); trainer party entries are a name (level 5) or
+`{name, level}`.
+
 ## Roster
 
 | Species    | Type    |

@@ -3,6 +3,10 @@
 
 types: [Kernel, Shell, Browser, Editor]
 
+# Species stats (hp/atk/defense/spd) are the values at base_level
+base_level: 5
+max_level: 50
+
 # Attacking type -> defending type -> damage multiplier (default 1.0)
 type_effectiveness:
   # Cycle Kernel > Shell > Browser > Editor > Kernel; see docs/design.md
@@ -18,10 +22,16 @@ species:
     atk: 8
     defense: 6
     spd: 7
-    moves:
-      - {name: Peck, power: 6, type: Kernel}
-      - {name: Code, power: 8, type: Editor}
-      - {name: Shellshock, power: 10, type: Shell}
+    # Stats above are level 5; each level adds `growth` (fractions carry)
+    growth: {hp: 2.5, atk: 1.2, defense: 1.0, spd: 1.0}
+    xp_yield: 55
+    learnset:  # level -> move; only the newest 4 are kept
+      - {level: 1, name: Peck, power: 6, type: Kernel}
+      - {level: 1, name: Code, power: 8, type: Editor}
+      - {level: 1, name: Shellshock, power: 10, type: Shell}
+      - {level: 9, name: Sudo, power: 11, type: Kernel}
+      - {level: 14, name: Kernel Panic, power: 14, type: Kernel}
+      - {level: 20, name: Rm -rf, power: 16, type: Shell}
     # Drawn until a real sprite exists: palette shades and the "feet" box
     sprite: tux  # assets/sprites/tux.png (from mascots/tux.svg); optional
     placeholder: {body: 2, feet: 3, feet_box: [14, 20, 18, 28]}
@@ -32,10 +42,16 @@ species:
     atk: 7
     defense: 7
     spd: 5
-    moves:
-      - {name: Fork Bomb, power: 7, type: Shell}
-      - {name: Daemonize, power: 5, type: Kernel}
-      - {name: Edit Conf, power: 8, type: Editor}
+    # Stats above are level 5; each level adds `growth` (fractions carry)
+    growth: {hp: 2.5, atk: 1.2, defense: 1.0, spd: 1.0}
+    xp_yield: 55
+    learnset:  # level -> move; only the newest 4 are kept
+      - {level: 1, name: Fork Bomb, power: 7, type: Shell}
+      - {level: 1, name: Daemonize, power: 5, type: Kernel}
+      - {level: 1, name: Edit Conf, power: 8, type: Editor}
+      - {level: 9, name: Pledge, power: 10, type: Shell}
+      - {level: 14, name: Trident, power: 13, type: Kernel}
+      - {level: 20, name: Jail, power: 16, type: Shell}
     sprite: bsd
     placeholder: {body: 2, feet: 1, feet_box: [12, 24, 20, 28]}
 
@@ -45,10 +61,16 @@ species:
     atk: 7
     defense: 5
     spd: 6
-    moves:
-      - {name: Fork, power: 7, type: Shell}
-      - {name: PR, power: 5, type: Editor}
-      - {name: Browse, power: 9, type: Browser}
+    # Stats above are level 5; each level adds `growth` (fractions carry)
+    growth: {hp: 2.5, atk: 1.2, defense: 1.0, spd: 1.0}
+    xp_yield: 50
+    learnset:  # level -> move; only the newest 4 are kept
+      - {level: 1, name: Fork, power: 7, type: Shell}
+      - {level: 1, name: PR, power: 5, type: Editor}
+      - {level: 1, name: Browse, power: 9, type: Browser}
+      - {level: 9, name: Merge, power: 11, type: Browser}
+      - {level: 14, name: Pages, power: 13, type: Browser}
+      - {level: 20, name: Force Push, power: 16, type: Shell}
     sprite: octocat
     placeholder: {body: 1, feet: 3, feet_box: [12, 24, 20, 28]}
 
@@ -58,11 +80,16 @@ species:
     atk: 7
     defense: 7
     spd: 6
-    moves:
-      - {name: Goroutine, power: 7, type: Kernel}
-      - {name: Dig, power: 6, type: Kernel}
-      - {name: Go Fmt, power: 8, type: Editor}
-      - {name: Pipe, power: 6, type: Shell}
+    # Stats above are level 5; each level adds `growth` (fractions carry)
+    growth: {hp: 2.5, atk: 1.2, defense: 1.0, spd: 1.0}
+    xp_yield: 50
+    learnset:  # level -> move; only the newest 4 are kept
+      - {level: 1, name: Goroutine, power: 7, type: Kernel}
+      - {level: 1, name: Dig, power: 6, type: Kernel}
+      - {level: 1, name: Go Fmt, power: 8, type: Editor}
+      - {level: 1, name: Pipe, power: 6, type: Shell}
+      - {level: 10, name: Channel, power: 10, type: Shell}
+      - {level: 15, name: Concurrency, power: 13, type: Kernel}
     placeholder: {body: 1, feet: 2, feet_box: [12, 24, 20, 28]}
 
   Elephpant:
@@ -71,10 +98,16 @@ species:
     atk: 7
     defense: 6
     spd: 4
-    moves:
-      - {name: Echo, power: 6, type: Editor}
-      - {name: Stampede, power: 9, type: Editor}
-      - {name: Segfault, power: 7, type: Kernel}
+    # Stats above are level 5; each level adds `growth` (fractions carry)
+    growth: {hp: 2.5, atk: 1.2, defense: 1.0, spd: 1.0}
+    xp_yield: 55
+    learnset:  # level -> move; only the newest 4 are kept
+      - {level: 1, name: Echo, power: 6, type: Editor}
+      - {level: 1, name: Stampede, power: 9, type: Editor}
+      - {level: 1, name: Segfault, power: 7, type: Kernel}
+      - {level: 8, name: Composer, power: 10, type: Editor}
+      - {level: 13, name: Artisan, power: 12, type: Browser}
+      - {level: 19, name: Fatal Error, power: 15, type: Kernel}
     placeholder: {body: 2, feet: 3, feet_box: [10, 24, 22, 28]}
 
   Konqi:
@@ -83,17 +116,23 @@ species:
     atk: 8
     defense: 5
     spd: 7
-    moves:
-      - {name: Claw, power: 6, type: Browser}
-      - {name: Surf, power: 8, type: Browser}
-      - {name: Script, power: 7, type: Shell}
-      - {name: View Source, power: 5, type: Editor}
+    # Stats above are level 5; each level adds `growth` (fractions carry)
+    growth: {hp: 2.5, atk: 1.2, defense: 1.0, spd: 1.0}
+    xp_yield: 50
+    learnset:  # level -> move; only the newest 4 are kept
+      - {level: 1, name: Claw, power: 6, type: Browser}
+      - {level: 1, name: Surf, power: 8, type: Browser}
+      - {level: 1, name: Script, power: 7, type: Shell}
+      - {level: 1, name: View Source, power: 5, type: Editor}
+      - {level: 10, name: Cookie, power: 10, type: Browser}
+      - {level: 15, name: Konsole, power: 13, type: Shell}
     placeholder: {body: 1, feet: 1, feet_box: [12, 24, 20, 28]}
 
 # Species met in tall grass, with relative weights
+# `level` is a number or a [min, max] range
 wild_encounters:
-  - {species: Octocat, weight: 3}
-  - {species: BSD Daemon, weight: 2}
-  - {species: Konqi, weight: 2}
-  - {species: Gopher, weight: 2}
-  - {species: Elephpant, weight: 1}
+  - {species: Octocat, weight: 3, level: [3, 6]}
+  - {species: BSD Daemon, weight: 2, level: [3, 6]}
+  - {species: Konqi, weight: 2, level: [3, 6]}
+  - {species: Gopher, weight: 2, level: [3, 6]}
+  - {species: Elephpant, weight: 1, level: [4, 7]}
