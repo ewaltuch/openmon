@@ -77,7 +77,15 @@ class OverworldScene:
 
         self.is_paused = False
         self.pause_menu_idx = 0
-        self.pause_menu_options = ["Continue", "Save", "Load", "Toggle Hints", "Quit"]
+        self.pause_menu_options = [
+            "Continue",
+            "Mascots",
+            "Bag",
+            "Save",
+            "Load",
+            "Toggle Hints",
+            "Quit",
+        ]
 
         self.notification_text = None
         self.notification_timer = 0
@@ -394,6 +402,14 @@ class OverworldScene:
         selected_option = self.pause_menu_options[self.pause_menu_idx]
         if selected_option == "Continue":
             self.is_paused = False
+        elif selected_option == "Mascots":
+            from .menu_screens import PartyScreen
+
+            self.manager.push(PartyScreen(self.manager, self.party))
+        elif selected_option == "Bag":
+            from .menu_screens import BagScreen
+
+            self.manager.push(BagScreen(self.manager, self.party, self.inventory))
         elif selected_option == "Save":
             self._save_game()
             self.is_paused = False
