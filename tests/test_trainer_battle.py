@@ -4,6 +4,7 @@ Test trainer battle functionality.
 
 import pygame
 
+from src.engine.battle_result import BattleResult
 from src.engine.battle_scene import BattleScene
 from src.engine.inventory import InventoryManager
 from src.engine.npc import NPC
@@ -293,7 +294,7 @@ def test_trainer_battle_won_after_whole_party_faints():
     assert battle.msg == "You defeated the trainer!"
     while battle.messages:
         battle.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_z))
-    assert manager.last_battle_won is True
+    assert manager.battle_result.won is True
 
 
 def _overworld_after_trainer_battle(won):
@@ -304,9 +305,7 @@ def _overworld_after_trainer_battle(won):
     scene = OverworldScene(manager)
     trainer = next(npc for npc in scene.npcs if npc.trainer)
     scene._pending_trainer = trainer
-    manager.last_battle_party_states = scene.party
-    if won:
-        manager.last_battle_won = True
+    manager.battle_result = BattleResult(party_states=scene.party, won=won)
     scene.update(0.016)
     return manager, scene, trainer
 
@@ -314,7 +313,7 @@ def _overworld_after_trainer_battle(won):
 def test_trainer_defeated_only_on_win():
     manager, scene, trainer = _overworld_after_trainer_battle(won=True)
     assert trainer.defeated is True
-    assert not hasattr(manager, "last_battle_won")
+    assert manager.battle_result is None
     assert scene._pending_trainer is None
 
 

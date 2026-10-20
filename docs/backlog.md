@@ -34,7 +34,7 @@ None.
 - Pokemon-like damage formula (seedable), typewriter text with blinking prompt, hit flash/shake via `BattleMessage.effect`
 
 **2.4 Items, money and a shop**
-- Items in `assets/items.yaml` (with prices), money saved/loaded and shown in HUD and Bag, `ShopScreen` (buy/sell at half, no key items), shop NPC Grace, trainer `reward` via `last_battle_reward`
+- Items in `assets/items.yaml` (with prices), money saved/loaded and shown in HUD and Bag, `ShopScreen` (buy/sell at half, no key items), shop NPC Grace, trainer `reward` via `BattleResult.reward`
 
 **2026-10-20: 2.3 Multiple maps and warps**
 - `assets/maps/` with town and route1 (CSV + YAML), fade warps both ways, per-map encounter tables, `map` in saves (old saves load into town), defeated trainers keyed `map:npc_id`

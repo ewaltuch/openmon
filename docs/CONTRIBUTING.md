@@ -33,10 +33,11 @@ CI runs ruff, black --check and pytest on every push and PR to `main`.
   back one Z press at a time. Use `self.msg = ...` only for one-off feedback
   that isn't part of a turn ("You can't flee..."). Future animations and SFX
   belong on the queue.
-- **Battle results** reach the overworld through attributes set on the
-  `SceneManager` before `pop()`. `OverworldScene.update()` reads them with
-  `getattr` and removes them with `delattr`. Follow the pattern, and always
-  clean up the flag.
+- **Battle results** reach the overworld as a `BattleResult`
+  (`src/engine/battle_result.py`) that `BattleScene._finish_battle` sets on
+  `manager.battle_result` before `pop()`. `OverworldScene.update()` applies it
+  and resets it to None. To add an outcome, add a defaulted field, fill it in
+  `_finish_battle`, and consume it in `_apply_battle_result`.
 - **Overworld** movement is grid-based (`src/overworld.py` `Player.try_step` /
   `update`). Gameplay hooks belong in `OverworldScene._on_step_finished`.
 - **Text**: use `fonts.get_font(size)` and `fonts.wrap_text`; never build fonts

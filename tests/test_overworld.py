@@ -1,12 +1,13 @@
 import pygame
 
+from src.engine.battle_result import BattleResult
 from src.engine.overworld_scene import OverworldScene
 
 
 class DummyManager:
     def __init__(self):
         self.scenes = []
-        self.captured_mascot_name = None
+        self.battle_result = None
 
     def push(self, scene):
         self.scenes.append(scene)
@@ -15,7 +16,7 @@ class DummyManager:
 def test_party_adds_captured():
     mgr = DummyManager()
     scene = OverworldScene(mgr)
-    mgr.captured_mascot_name = "Octocat"
+    mgr.battle_result = BattleResult(captured_name="Octocat")
     scene.update(0.1)
     # Party is now a list of state dicts, check for name
     assert any(state["name"] == "Octocat" for state in scene.party)

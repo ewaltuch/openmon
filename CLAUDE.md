@@ -55,14 +55,14 @@ The game uses a stack-based scene manager (`src/engine/scene_manager.py`) that p
 
 The SceneManager maintains a stack where the top scene receives events and updates. Scenes can push new scenes on top (e.g., transitioning from overworld to battle) or pop themselves to return to the previous scene. Scenes are duck-typed (`handle_event`/`update`/`draw`, constructed with the manager); only `TitleScene`/`CreditsScene` subclass the `Scene` base in `scenes.py`. Quitting from the overworld pause menu replaces the stack outright (`manager.scenes = [TitleScene(...)]`).
 
-**Cross-scene state passing**: Scenes don't return values. `BattleScene` sets ad-hoc attributes on the SceneManager before popping, and `OverworldScene.update()` reads them with `getattr` and then deletes them with `delattr`:
-- `last_battle_party_states`: the party's HP/state after battle
-- `battle_loss_reset`: if set, the player is moved back to spawn
-- `last_battle_won`: set when the whole opponent party fainted; the overworld marks its `_pending_trainer` defeated only then
-- `last_battle_reward`: money for a trainer win (`reward` on the NPC); the overworld adds it to the inventory's money
-- `captured_mascot_name`: the capture is already in `last_battle_party_states` (at full HP); the overworld only adds it itself if no party sync came with it
+**Cross-scene state passing**: Scenes don't return values. `BattleScene._finish_battle` builds one `BattleResult` (`src/engine/battle_result.py`), sets it as `manager.battle_result`, then pops. `OverworldScene.update()` applies it (`_apply_battle_result`) and resets `manager.battle_result = None`. Fields:
+- `party_states`: the party's HP/state (incl. xp/level) after battle; on a loss, revived to full HP
+- `lost`: whole player party fainted, so the player is moved back to spawn
+- `won`: whole opponent party fainted; the overworld marks its `_pending_trainer` defeated only then
+- `reward`: money for a trainer win (`reward` on the NPC); only paid when `won`
+- `captured_name`: the capture is already in `party_states` (at full HP); the overworld only adds it itself if no party sync came with it
 
-Follow this pattern (and clean up the flag) when adding new battle outcomes.
+To add a battle outcome, add a field with a default to `BattleResult`, fill it in `_finish_battle`, and consume it in `_apply_battle_result`. No per-field cleanup is needed.
 
 ### Core Engine Loop
 

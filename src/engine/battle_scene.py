@@ -14,6 +14,7 @@ import pygame
 
 from src.constants import GB_PALETTE, PARTY_MAX, SCREEN_HEIGHT, SCREEN_WIDTH
 from src.engine import audio, mascots
+from src.engine.battle_result import BattleResult
 from src.engine.fonts import get_font, wrap_text
 from src.engine.mascots import (  # noqa: F401 - re-exported for callers/tests
     ELEMENT_TYPES,
@@ -297,14 +298,15 @@ class BattleScene:
             for state in revived_states:
                 state["hp"] = state["max_hp"]
                 state["fainted"] = False
-            self.manager.last_battle_party_states = revived_states
-            self.manager.battle_loss_reset = True
+            result = BattleResult(party_states=revived_states, lost=True)
         else:
-            self.manager.last_battle_party_states = self.get_party_states()
+            result = BattleResult(party_states=self.get_party_states())
             if self._opponent_party_fainted():
-                self.manager.last_battle_won = True
-                if self.reward:
-                    self.manager.last_battle_reward = self.reward
+                result.won = True
+                result.reward = self.reward
+        if self.captured:
+            result.captured_name = self.opponent.name
+        self.manager.battle_result = result
         audio.play_music("overworld")
         self.manager.pop()
 
@@ -639,8 +641,6 @@ class BattleScene:
             self.party.append(self.hydrate_mascot(captured_state))
             self.party_states.append(captured_state)
 
-            # Persist captured mascot name on the manager for the overworld
-            self.manager.captured_mascot_name = self.opponent.name
             self.battle_over = True
         else:
             self._say("Capture failed!")
