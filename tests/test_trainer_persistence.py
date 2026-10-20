@@ -3,8 +3,9 @@ Test that defeated trainer state persists across save/load.
 """
 
 import pygame
-from src.engine.scene_manager import SceneManager
+
 from src.engine.overworld_scene import OverworldScene
+from src.engine.scene_manager import SceneManager
 
 
 def test_trainer_defeated_state_saves_and_restores():

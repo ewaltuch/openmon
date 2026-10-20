@@ -6,6 +6,7 @@ If the mixer can't start (CI, no device) every call is a silent no-op.
 """
 
 import array
+import contextlib
 
 import pygame
 
@@ -23,12 +24,18 @@ SFX = {
 
 _C, _D, _E, _F, _G, _A = 262, 294, 330, 349, 392, 440
 MUSIC = {
-    "title": [(_C, 0.3), (_E, 0.3), (_G, 0.3), (_E, 0.3), (_D, 0.3), (_F, 0.3)]
-    + [(_A, 0.3), (_F, 0.3)],
-    "overworld": [(_E, 0.25), (_G, 0.25), (_E, 0.25), (_C, 0.25), (0, 0.25)]
-    + [(_D, 0.25), (_F, 0.25), (_D, 0.25), (_G, 0.5), (0, 0.25)],
-    "battle": [(_A, 0.12), (_A, 0.12), (_E, 0.12), (_A, 0.12), (_G, 0.12)]
-    + [(_G, 0.12), (_D, 0.12), (_G, 0.12)] * 2,
+    "title": [
+        *[(_C, 0.3), (_E, 0.3), (_G, 0.3), (_E, 0.3), (_D, 0.3), (_F, 0.3)],
+        *[(_A, 0.3), (_F, 0.3)],
+    ],
+    "overworld": [
+        *[(_E, 0.25), (_G, 0.25), (_E, 0.25), (_C, 0.25), (0, 0.25)],
+        *[(_D, 0.25), (_F, 0.25), (_D, 0.25), (_G, 0.5), (0, 0.25)],
+    ],
+    "battle": [
+        *[(_A, 0.12), (_A, 0.12), (_E, 0.12), (_A, 0.12), (_G, 0.12)],
+        *[(_G, 0.12), (_D, 0.12), (_G, 0.12)] * 2,
+    ],
 }
 
 muted = False
@@ -48,7 +55,7 @@ def _init():
             if not pygame.mixer.get_init():
                 pygame.mixer.init(RATE, -16, 1, 512)
             _ready = True
-        except Exception:
+        except pygame.error:
             _ready = False
     return _ready
 
@@ -78,11 +85,9 @@ def _sound(kind, name):
 def set_muted(value):
     global muted
     muted = bool(value)
-    try:
+    with contextlib.suppress(pygame.error):
         if _music_channel is not None:
             _music_channel.set_volume(0 if muted else 1)
-    except Exception:
-        pass
 
 
 def toggle_mute():
@@ -94,10 +99,8 @@ def play_sfx(name):
     played.append(name)
     if muted or name not in SFX or not _init():
         return
-    try:
+    with contextlib.suppress(pygame.error):
         _sound("sfx", name).play()
-    except Exception:
-        pass
 
 
 def play_music(name):
@@ -108,7 +111,7 @@ def play_music(name):
     current_music = name
     if not _init():
         return
-    try:
+    with contextlib.suppress(pygame.error):
         if _music_channel is not None:
             _music_channel.stop()
             _music_channel = None
@@ -116,15 +119,11 @@ def play_music(name):
             _music_channel = _sound("music", name).play(loops=-1)
             if _music_channel is not None:
                 _music_channel.set_volume(0 if muted else 1)
-    except Exception:
-        pass
 
 
 def stop_music():
     global current_music
     current_music = None
-    try:
+    with contextlib.suppress(pygame.error):
         if _music_channel is not None:
             _music_channel.stop()
-    except Exception:
-        pass

@@ -2,8 +2,9 @@
 Save/load system for Open-Mon. Serializes party, inventory, position to JSON.
 """
 
-import os
 import json
+import os
+
 from src import constants
 
 
@@ -27,7 +28,7 @@ class SaveManager:
     @staticmethod
     def load():
         try:
-            with open(_save_path(), "r") as f:
+            with open(_save_path()) as f:
                 return json.load(f)
         except FileNotFoundError:
             return None

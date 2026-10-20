@@ -53,6 +53,6 @@ class NPC:
 
 
 def load_npcs(yaml_path):
-    with open(yaml_path, "r") as f:
+    with open(yaml_path) as f:
         data = yaml.safe_load(f)
     return [NPC(**npc) for npc in data]

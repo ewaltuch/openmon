@@ -9,8 +9,8 @@ picked up by the next save.
 import pygame
 
 from src.constants import GB_PALETTE
-from src.engine.inventory import Item
 from src.engine.fonts import get_font
+from src.engine.inventory import Item
 
 CONFIRM_KEYS = (pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER)
 BACK_KEYS = (pygame.K_x, pygame.K_ESCAPE)

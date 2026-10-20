@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import ClassVar
 
 import pygame
 import pytest
@@ -11,11 +12,11 @@ from src.engine.overworld_scene import OverworldScene
 from src.overworld import load_overworld_sprite, load_player_images
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
-import svg2gb  # noqa: E402
+import svg2gb
 
 
 class FakeManager:
-    scenes = []
+    scenes: ClassVar[list] = []
 
     def push(self, scene):
         pass

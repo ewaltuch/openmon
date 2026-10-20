@@ -1,7 +1,8 @@
 from unittest.mock import patch
+
 from src.engine.battle_scene import BattleScene
-from src.engine.save import SaveManager
 from src.engine.inventory import InventoryManager
+from src.engine.save import SaveManager
 
 
 class DummyManager:

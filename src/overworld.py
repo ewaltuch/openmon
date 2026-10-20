@@ -4,7 +4,7 @@ Overworld MVP for Open-Mon: tile map, grid-based player movement, collision.
 
 import csv
 import os
-from functools import lru_cache
+from functools import cache
 
 import pygame
 
@@ -57,7 +57,7 @@ class TileMap:
                 surface.blit(img, (x * TILE_SIZE - camera_x, y * TILE_SIZE - camera_y))
 
 
-@lru_cache(maxsize=None)
+@cache
 def load_overworld_sprite(name):
     """8x8 overworld sprite from assets/sprites/overworld, or None if missing.
 

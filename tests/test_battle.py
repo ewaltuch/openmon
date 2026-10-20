@@ -1,7 +1,8 @@
 from unittest.mock import patch
 
 import pygame
-from src.engine.battle_scene import BattleScene, Move, TYPE_EFFECTIVENESS
+
+from src.engine.battle_scene import TYPE_EFFECTIVENESS, BattleScene, Move
 from src.engine.inventory import InventoryManager
 
 

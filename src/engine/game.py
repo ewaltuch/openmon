@@ -3,11 +3,11 @@ Game loop and main engine entry point for Open-Mon.
 """
 
 import pygame
+
+from src.constants import SCREEN_HEIGHT, SCREEN_WIDTH
+
 from .scene_manager import SceneManager
 from .scenes import TitleScene
-
-
-from src.constants import SCREEN_WIDTH, SCREEN_HEIGHT
 
 FPS = 60
 

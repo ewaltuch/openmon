@@ -2,8 +2,8 @@
 Tests for the inventory system in Open-Mon.
 """
 
-from src.engine.inventory import Item, InventoryManager
 from src.engine.battle_scene import Mascot
+from src.engine.inventory import InventoryManager, Item
 
 
 class TestItem:

@@ -3,9 +3,10 @@ Test that party selection UI can display multiple mascots.
 """
 
 import pygame
-from src.engine.scene_manager import SceneManager
+
 from src.engine.battle_scene import BattleScene
 from src.engine.inventory import InventoryManager
+from src.engine.scene_manager import SceneManager
 
 
 def test_large_party_display():

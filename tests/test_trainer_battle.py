@@ -3,10 +3,11 @@ Test trainer battle functionality.
 """
 
 import pygame
-from src.engine.scene_manager import SceneManager
+
 from src.engine.battle_scene import BattleScene
 from src.engine.inventory import InventoryManager
 from src.engine.npc import NPC
+from src.engine.scene_manager import SceneManager
 
 
 def test_trainer_battle_init():
