@@ -1,15 +1,12 @@
 # Open-Mon Backlog
 
-**Last updated:** 2026-10-18. Task details are in [ROADMAP.md](./ROADMAP.md).
+**Last updated:** 2026-10-20. Task details are in [ROADMAP.md](./ROADMAP.md).
 
 ## Next up (in order)
 
 | # | Task | Notes |
 |---|------|-------|
-| 1.1 | Art pipeline and real sprites | Pixel font first; it's the cheapest big visual win |
-| 1.2 | Roster and type chart | 6 species; full matchup table |
-| 1.3 | Audio | Hook SFX into `BattleMessage` |
-| 1.4 | Title menu, credits, bag | Bag reuses battle item targeting |
+| 1.1 (rest) | Pixel font; real sprites for Gopher/Elephpant/Konqi | No verified OFL font source yet |
 | 1.5 | Battle feel | Damage formula review |
 
 Then Milestone 2, starting with **2.1 Progression (XP and levels)**.
@@ -19,6 +16,13 @@ Then Milestone 2, starting with **2.1 Progression (XP and levels)**.
 None.
 
 ## Done
+
+**2026-10-20: Milestone 1 mostly landed**
+- 1.1 SVG→PNG pipeline works (`make assets`), mascot/NPC/player sprites (font and 3 new species' art outstanding)
+- 1.2 Roster of 6, full type cycle, `docs/design.md` (per-area encounter tables wait for 2.3)
+- 1.3 Audio module, per-scene music, SFX via `BattleMessage.sound`, mute (`beepbox2wav.py` unverified; mute only applied on load)
+- 1.4 Title menu with Continue, credits, Mascots and Bag pause screens
+- Fixed ruff CI errors
 
 **2026-10-18: re-audit and stabilization**
 - Trainer battles switch to the next mascot on faint; trainer defeated only on a win
