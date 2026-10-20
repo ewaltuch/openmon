@@ -48,7 +48,6 @@ coverage.xml
 
 # VS Code / Claude Code / dotenv etc
 .vscode/
-CLAUDE.md
 .env
 
 # macOS
