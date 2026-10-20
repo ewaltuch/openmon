@@ -6,7 +6,6 @@
 
 | # | Task | Size | Why now / notes |
 |---|------|------|-----------------|
-| 1.3 (rest) | Apply saved `muted` at launch; verify `beepbox2wav.py` | S | Small bug-class fix: mute only applies after loading |
 | 2.1 (rest) | Player prompt for which move to forget; XP bar | S | Auto-forgetting the oldest move is a gameplay wart |
 | 2.2 | Trainer AI (effective/high-power moves), line-of-sight challenge | M | Unblocks Milestone 3; rewards already done |
 | 2.6 | Save versioning and 3 slots | M | Do last in M2: save format now stable (map, money, level, xp) |
