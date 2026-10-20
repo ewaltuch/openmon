@@ -102,6 +102,9 @@ stat growth per species and learnsets in `mascots.yaml`. Saved party states gain
   warps, NPCs and an optional encounter table); `town` and `route1` exist.
 - Warps fade out/in on `OverworldScene._on_step_finished`; saves store `map`
   and defeated trainers as `map:npc_id`.
+- Content: `registry` interior reached by a door in town (Grace moved inside),
+  `encounters: []` disables wild encounters, second trainer on `route1`; a test
+  checks every map's warps pair up and NPCs stand on walkable tiles.
 - Decide on Tiled `.tmx` (`pytmx`) once there are more than about 5 maps. CSV
   plus YAML is fine until then.
 

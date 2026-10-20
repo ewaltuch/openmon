@@ -174,3 +174,80 @@ def test_defeated_trainers_keyed_by_map():
     scene2._load_game()
     scene2.enter_map("town")
     assert next(n for n in scene2.npcs if n.trainer).defeated
+
+
+def all_map_ids():
+    import glob
+    import os
+
+    ids = sorted(
+        os.path.splitext(os.path.basename(p))[0]
+        for p in glob.glob(os.path.join(MAP_DIR, "*.yaml"))
+    )
+    assert {"town", "route1", "registry"} <= set(ids)
+    return ids
+
+
+def test_all_maps_warps_pair_up_and_npcs_are_walkable():
+    maps = {i: load_map(i) for i in all_map_ids()}
+    for m in maps.values():
+        assert m.tilemap.is_walkable(*m.spawn)
+        seen = set()
+        for npc in m.npcs:
+            assert m.tilemap.is_walkable(npc.x, npc.y), (m.id, npc.id)
+            assert (npc.x, npc.y) not in seen and m.warp_at(npc.x, npc.y) is None
+            seen.add((npc.x, npc.y))
+        assert len({n.id for n in m.npcs}) == len(m.npcs)
+        for w in m.warps:
+            dest = maps[w.to]  # KeyError: warp to a missing map
+            assert m.tilemap.is_walkable(w.x, w.y), (m.id, w)
+            assert dest.tilemap.is_walkable(w.tx, w.ty), (m.id, w)
+            assert dest.warp_at(w.tx, w.ty) is None
+            assert not any((n.x, n.y) == (w.tx, w.ty) for n in dest.npcs)
+            # a warp back leads to this map, next to the arrival tile
+            backs = [b for b in dest.warps if b.to == m.id]
+            assert backs, (m.id, w.to)
+            assert any(abs(b.x - w.tx) + abs(b.y - w.ty) == 1 for b in backs)
+
+
+def test_registry_holds_grace_and_has_no_encounters(monkeypatch):
+    reg = load_map("registry")
+    assert reg.encounters == []
+    assert any(n.id == "shop_1" and n.name == "Grace" for n in reg.npcs)
+    assert not any(n.id == "shop_1" for n in load_map("town").npcs)
+
+    def boom(*a, **k):
+        raise AssertionError("no encounter expected")
+
+    monkeypatch.setattr(mascots, "roll_wild_encounter", boom)
+    scene = make_scene()
+    scene.enter_map("registry")
+    # even on a grass tile, an empty table means nothing is rolled
+    scene.tilemap.tiles[2][2] = 2
+    scene.player.place(2, 2)
+    scene.steps = scene.encounter_steps = 1
+    scene._on_step_finished()
+
+
+def test_warp_into_registry_and_back(monkeypatch):
+    scene = make_scene()
+    scene.player.place(22, 6)
+    walk_until_warp(scene, monkeypatch, pygame.K_UP)
+    finish_fade(scene)
+    assert scene.map.id == "registry" and scene.player.tile == (5, 6)
+    walk_until_warp(scene, monkeypatch, pygame.K_DOWN)
+    finish_fade(scene)
+    assert scene.map.id == "town" and scene.player.tile == (22, 6)
+
+
+def test_route_trainer_defeat_keyed_by_map():
+    trainer = next(n for n in load_map("route1").npcs if n.id == "route_trainer")
+    assert trainer.trainer and trainer.reward == 80
+    assert trainer.party == ["Gopher", {"name": "Konqi", "level": 7}]
+    scene = make_scene()
+    scene.enter_map("route1", 5, 5)
+    next(n for n in scene.npcs if n.id == "route_trainer").defeated = True
+    scene.enter_map("town")
+    assert scene.defeated_trainers["route1:route_trainer"] is True
+    scene.enter_map("route1")
+    assert next(n for n in scene.npcs if n.id == "route_trainer").defeated

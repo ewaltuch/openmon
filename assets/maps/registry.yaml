@@ -1,0 +1,22 @@
+name: Package Registry
+tiles: registry.csv
+spawn: [5, 6]
+# Empty table: no wild encounters indoors (no grass here anyway)
+encounters: []
+warps:
+  - {x: 5, y: 7, to: town, tx: 22, ty: 6, facing: down}
+npcs:
+  - id: shop_1
+    name: Grace
+    x: 5
+    y: 3
+    sprite: trainer
+    shop: true
+    stock:
+      - package
+      - health_pack
+      - full_restore
+      - revive
+    dialogue:
+      - "Welcome to the Package Registry!"
+      - "Take a look at my wares."
