@@ -1,43 +1,39 @@
-# Open-Mon Architecture
+# Design
 
-```mermaid
-graph TD
-    Game --> SceneManager
-    SceneManager --> TitleScene
-    SceneManager --> OverworldScene
-    SceneManager --> BattleScene
-    OverworldScene --> TileMap
-    OverworldScene --> Player
-    OverworldScene --> NPC
-    OverworldScene --> InventoryManager
-    OverworldScene --> SaveManager
-    OverworldScene -- pushes --> BattleScene
-    BattleScene -- results via SceneManager attrs --> OverworldScene
-    BattleScene --> BattleMessage
-    OverworldScene --> mascots
-    BattleScene --> mascots
-    mascots --> mascots.yaml
-    NPC --> npcs.yaml
-```
+## Types and the type chart
 
-- **Game** (`src/engine/game.py`): 60 FPS loop; `dt` is in seconds.
-- **SceneManager**: scene stack; only the top scene runs.
-- **OverworldScene**: tile map, grid movement, NPC dialogue/trainers/healer,
-  encounters, HUD, pause menu, save/load.
-- **BattleScene**: turn-based battle. Logic resolves a turn immediately;
-  `BattleMessage`s (text plus HP snapshot) replay it on screen.
-- **mascots** (`src/engine/mascots.py`): species registry, type chart, wild
-  encounter table and cached sprites, loaded from `assets/mascots.yaml`.
-- **TileMap / Player** (`src/overworld.py`): CSV map (0 floor, 1 wall, 2 grass)
-  and one-tile-at-a-time movement.
-- **SaveManager**: JSON at `~/.openmon/save1.json` (player tile, party states,
-  inventory, defeated trainers).
+Four element types form a cycle. Each type is strong against the next one and
+weak against the previous one:
 
-## Battle rules (current)
+    Kernel > Shell > Browser > Editor > Kernel
 
-- Damage: `max(1, int((power + atk - defense) * type_multiplier))`.
-- The faster mascot (`spd`) acts first; ties go to the player.
-- Type chart: see `type_effectiveness` in `assets/mascots.yaml` (unlisted
-  pairs are 1.0).
-- Capture chance: `max(0.2, 1 - hp / max_hp)`; wild battles only; party max 5.
-- Losing every mascot: the party is fully healed and you return to spawn.
+Multipliers apply to the attacking move's type against the defender's type.
+Unlisted pairs (including same-type) are 1.0.
+
+| Attacker \ Defender | Kernel | Shell | Browser | Editor |
+|---------------------|--------|-------|---------|--------|
+| Kernel              | 1.0    | 2.0   | 1.0     | 0.5    |
+| Shell               | 0.5    | 1.0   | 2.0     | 1.0    |
+| Browser             | 1.0    | 0.5   | 1.0     | 2.0    |
+| Editor              | 2.0    | 1.0   | 0.5     | 1.0    |
+
+The source of truth is `type_effectiveness` in `assets/mascots.yaml`.
+
+## Roster
+
+| Species    | Type    |
+|------------|---------|
+| Tux        | Kernel  |
+| Gopher     | Kernel  |
+| BSD Daemon | Shell   |
+| Octocat    | Browser |
+| Konqi      | Browser |
+| Elephpant  | Editor  |
+
+Each species has 3-4 moves; move types may differ from the species type.
+
+## Wild encounters
+
+`wild_encounters` is one global weighted list, so every grass tile rolls from
+the same table (Octocat most common, Elephpant rarest). Per-area tables need
+map support (zones in the tile map) and are not done yet.

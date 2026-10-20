@@ -28,7 +28,7 @@ def test_type_effectiveness():
     octocat = scene.make_mascot("Octocat")
     move = Move("Shellshock", 10, "Shell")
     multiplier = TYPE_EFFECTIVENESS.get((move.type, octocat.type), 1.0)
-    assert multiplier == 1.0  # Shell vs Browser (default)
+    assert multiplier == 2.0  # Shell vs Browser (Shell > Browser)
     move2 = Move("Code", 8, "Editor")
     multiplier2 = TYPE_EFFECTIVENESS.get((move2.type, octocat.type), 1.0)
     assert multiplier2 == 0.5
@@ -330,3 +330,26 @@ def test_unknown_species_fails_loudly():
 
     with pytest.raises(ValueError, match="Unknown mascot species"):
         BattleScene(DummyManager()).make_mascot_state("Clippy")
+
+
+def test_every_species_loads_and_type_chart_is_full():
+    from src.engine.mascots import (
+        ELEMENT_TYPES,
+        SPECIES,
+        TYPE_EFFECTIVENESS,
+        make_mascot,
+    )
+
+    assert len(SPECIES) >= 6
+    for name, data in SPECIES.items():
+        assert make_mascot(name).name == name
+        assert 3 <= len(data["moves"]) <= 4
+        assert data["type"] in ELEMENT_TYPES
+        for move in data["moves"]:
+            assert move["type"] in ELEMENT_TYPES
+    assert {d["type"] for d in SPECIES.values()} == set(ELEMENT_TYPES)
+    for t in ELEMENT_TYPES:
+        strong = [d for (a, d), m in TYPE_EFFECTIVENESS.items() if a == t and m > 1]
+        weak = [d for (a, d), m in TYPE_EFFECTIVENESS.items() if a == t and m < 1]
+        assert strong, f"{t} is not strong against anything"
+        assert weak, f"{t} is not weak against anything"

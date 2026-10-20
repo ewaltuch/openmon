@@ -5,10 +5,11 @@ types: [Kernel, Shell, Browser, Editor]
 
 # Attacking type -> defending type -> damage multiplier (default 1.0)
 type_effectiveness:
-  Kernel: {Shell: 2.0}
-  Shell: {Kernel: 0.5}
-  Browser: {Editor: 2.0}
-  Editor: {Browser: 0.5}
+  # Cycle Kernel > Shell > Browser > Editor > Kernel; see docs/design.md
+  Kernel: {Shell: 2.0, Editor: 0.5}
+  Shell: {Browser: 2.0, Kernel: 0.5}
+  Browser: {Editor: 2.0, Shell: 0.5}
+  Editor: {Kernel: 2.0, Browser: 0.5}
 
 species:
   Tux:
@@ -48,7 +49,48 @@ species:
       - {name: Browse, power: 9, type: Browser}
     placeholder: {body: 1, feet: 3, feet_box: [12, 24, 20, 28]}
 
+  Gopher:
+    type: Kernel
+    hp: 23
+    atk: 7
+    defense: 7
+    spd: 6
+    moves:
+      - {name: Goroutine, power: 7, type: Kernel}
+      - {name: Dig, power: 6, type: Kernel}
+      - {name: Go Fmt, power: 8, type: Editor}
+      - {name: Pipe, power: 6, type: Shell}
+    placeholder: {body: 1, feet: 2, feet_box: [12, 24, 20, 28]}
+
+  Elephpant:
+    type: Editor
+    hp: 25
+    atk: 7
+    defense: 6
+    spd: 4
+    moves:
+      - {name: Echo, power: 6, type: Editor}
+      - {name: Stampede, power: 9, type: Editor}
+      - {name: Segfault, power: 7, type: Kernel}
+    placeholder: {body: 2, feet: 3, feet_box: [10, 24, 22, 28]}
+
+  Konqi:
+    type: Browser
+    hp: 21
+    atk: 8
+    defense: 5
+    spd: 7
+    moves:
+      - {name: Claw, power: 6, type: Browser}
+      - {name: Surf, power: 8, type: Browser}
+      - {name: Script, power: 7, type: Shell}
+      - {name: View Source, power: 5, type: Editor}
+    placeholder: {body: 1, feet: 1, feet_box: [12, 24, 20, 28]}
+
 # Species met in tall grass, with relative weights
 wild_encounters:
   - {species: Octocat, weight: 3}
-  - {species: BSD Daemon, weight: 1}
+  - {species: BSD Daemon, weight: 2}
+  - {species: Konqi, weight: 2}
+  - {species: Gopher, weight: 2}
+  - {species: Elephpant, weight: 1}
