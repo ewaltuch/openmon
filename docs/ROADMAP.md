@@ -106,9 +106,6 @@ stat growth per species and learnsets in `mascots.yaml`. Saved party states gain
 - Done: items in `assets/items.yaml` with prices, money in `InventoryManager`
   (saved, default 100), `ShopScreen`, shop NPC, trainer `reward`. Status
   cures still wait for status effects.
-- Move item definitions out of `inventory.py` into YAML (same pattern as
-  mascots).
-- Money, a shop NPC, and new items (status cures once status effects exist).
 
 ### 2.5 Storage beyond the party
 `PARTY_MAX` is 5 because the switch menu fits 5 rows. Add a "Repository"
