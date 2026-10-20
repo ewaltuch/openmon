@@ -175,7 +175,7 @@ def test_level_and_xp_persist_through_battle_result():
     )
     _win(scene)
     scene._finish_battle()
-    synced = manager.last_battle_party_states[0]
+    synced = manager.battle_result.party_states[0]
     assert synced["xp"] == scene.player.xp and synced["level"] == scene.player.level
     again = mascots.hydrate(synced)
     assert again.max_hp == scene.player.max_hp and again.xp == synced["xp"]

@@ -515,6 +515,32 @@ class OverworldScene:
 
             self.manager.scenes = [TitleScene(self.manager)]
 
+    def _apply_battle_result(self, result):
+        """Apply a BattleResult: party sync, loss reset, reward, trainer, capture."""
+        if result.party_states:
+            self.party = result.party_states
+
+            # A lost battle moves the player back to spawn
+            if result.lost:
+                self._sync_defeated()
+                self.enter_map(DEFAULT_MAP, *self.SPAWN_TILE)
+
+            # A trainer only counts as defeated if the battle was won
+            if result.won and result.reward:
+                self.inventory.money += result.reward
+                self.notification_text = f"Got ${result.reward}!"
+                self.notification_timer = 2
+            if self._pending_trainer is not None:
+                if result.won:
+                    self._pending_trainer.defeated = True
+                    self._sync_defeated()
+                self._pending_trainer = None
+
+        # The synced battle party already includes the capture; only add it
+        # when no party sync came with the result
+        if result.captured_name and not result.party_states:
+            self.party.extend(self._initialize_party([result.captured_name]))
+
     def update(self, dt):
         if self.is_paused:
             return
@@ -524,44 +550,11 @@ class OverworldScene:
             if self.notification_timer <= 0:
                 self.notification_text = None
 
-        # Sync party HP from last battle
-        battle_states = getattr(self.manager, "last_battle_party_states", None)
-        if battle_states:
-            self.party = battle_states
-            delattr(self.manager, "last_battle_party_states")
-
-            # Check if this was a battle loss - reset player to spawn
-            if getattr(self.manager, "battle_loss_reset", False):
-                self._sync_defeated()
-                self.enter_map(DEFAULT_MAP, *self.SPAWN_TILE)
-                delattr(self.manager, "battle_loss_reset")
-
-            # A trainer only counts as defeated if the battle was won
-            won = getattr(self.manager, "last_battle_won", False)
-            if won:
-                delattr(self.manager, "last_battle_won")
-            reward = getattr(self.manager, "last_battle_reward", 0)
-            if hasattr(self.manager, "last_battle_reward"):
-                delattr(self.manager, "last_battle_reward")
-            if won and reward:
-                self.inventory.money += reward
-                self.notification_text = f"Got ${reward}!"
-                self.notification_timer = 2
-            if self._pending_trainer is not None:
-                if won:
-                    self._pending_trainer.defeated = True
-                    self._sync_defeated()
-                self._pending_trainer = None
-
-        # Check if a mascot was captured in the last battle and add to party
-        captured_name = getattr(self.manager, "captured_mascot_name", None)
-        if captured_name:
-            # The synced battle party already includes the capture; only add it
-            # when no party sync came with the flag
-            if not battle_states:
-                self.party.extend(self._initialize_party([captured_name]))
-            # Clear the flag so we don't add it again
-            delattr(self.manager, "captured_mascot_name")
+        # Consume the finished battle's result, if any
+        result = getattr(self.manager, "battle_result", None)
+        if result is not None:
+            self.manager.battle_result = None
+            self._apply_battle_result(result)
 
         # Input is locked while the warp fade plays
         if self.fade:

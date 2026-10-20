@@ -3,6 +3,7 @@
 import pygame
 import pytest
 
+from src.engine.battle_result import BattleResult
 from src.engine.battle_scene import BattleScene
 from src.engine.inventory import STARTING_MONEY, InventoryManager, get_item
 from src.engine.menu_screens import BagScreen, ShopScreen
@@ -132,12 +133,12 @@ def test_trainer_reward_paid_once_and_flag_cleaned():
     assert trainer.reward > 0
     scene._pending_trainer = trainer
     before = scene.inventory.money
-    manager.last_battle_party_states = scene.party
-    manager.last_battle_won = True
-    manager.last_battle_reward = trainer.reward
+    manager.battle_result = BattleResult(
+        party_states=scene.party, won=True, reward=trainer.reward
+    )
     scene.update(0.016)
     assert scene.inventory.money == before + trainer.reward
-    assert not hasattr(manager, "last_battle_reward")
+    assert manager.battle_result is None
     scene.update(0.016)
     assert scene.inventory.money == before + trainer.reward
 
@@ -159,10 +160,10 @@ def test_battle_sets_reward_only_on_win():
     battle = _trainer_battle(manager, 50)
     battle.opponent.hp = 0
     battle._finish_battle()
-    assert manager.last_battle_reward == 50
+    assert manager.battle_result.reward == 50
 
     manager = SceneManager()
     battle = _trainer_battle(manager, 50)
     battle.player.hp = 0
     battle._finish_battle()
-    assert not hasattr(manager, "last_battle_reward")
+    assert manager.battle_result.reward == 0

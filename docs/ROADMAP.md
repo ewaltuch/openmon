@@ -142,10 +142,6 @@ Address these opportunistically when touching the code nearby:
 
 - `OverworldScene` holds the HUD, pause menu, dialogue, save/load and
   encounters. Extract UI pieces as they grow.
-- Cross-scene results are ad-hoc `SceneManager` attributes
-  (`last_battle_party_states`, `battle_loss_reset`, `captured_mascot_name`,
-  `last_battle_won`). If more outcomes appear, replace them with a single
-  `BattleResult` object.
 - Asset paths mix relative (`SPRITE_DIR`) and `__file__`-relative styles. Pick
   `__file__`-relative.
 - `TileMap.draw` blits every tile each frame. That's fine at 30×21; cull to the

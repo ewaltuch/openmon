@@ -8,7 +8,7 @@ from src.engine.inventory import InventoryManager
 
 class DummyManager:
     def __init__(self):
-        self.captured_mascot_name = None
+        self.battle_result = None
 
 
 # Test mascot creation and move types

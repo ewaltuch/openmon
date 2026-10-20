@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from src.engine.battle_result import BattleResult
 from src.engine.battle_scene import BattleScene
 from src.engine.inventory import InventoryManager
 from src.engine.save import SaveManager
@@ -7,8 +8,7 @@ from src.engine.save import SaveManager
 
 class DummyManager:
     def __init__(self):
-        self.captured_mascot_name = None
-        self.last_battle_party_states = None
+        self.battle_result = None
 
     def push(self, scene):
         pass
@@ -75,10 +75,10 @@ def test_battle_hp_persistence():
     battle.party[0].hp = 8
 
     # Simulate battle ending
-    manager.last_battle_party_states = battle.get_party_states()
+    manager.battle_result = BattleResult(party_states=battle.get_party_states())
 
     # Verify HP is in returned states
-    assert manager.last_battle_party_states[0]["hp"] == 8
+    assert manager.battle_result.party_states[0]["hp"] == 8
 
 
 def test_healing_item_persists():
