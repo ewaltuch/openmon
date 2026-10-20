@@ -61,6 +61,7 @@ The SceneManager maintains a stack where the top scene receives events and updat
 - `won`: whole opponent party fainted; the overworld marks its `_pending_trainer` defeated only then
 - `reward`: money for a trainer win (`reward` on the NPC); only paid when `won`
 - `captured_name`: the capture is already in `party_states` (at full HP); the overworld only adds it itself if no party sync came with it
+- `storage_states` / `captured_to_storage`: the Repository after battle (None = unchanged); a capture with a full party (`PARTY_MAX`) lands there instead of in `party_states`
 
 To add a battle outcome, add a field with a default to `BattleResult`, fill it in `_finish_battle`, and consume it in `_apply_battle_result`. No per-field cleanup is needed.
 
@@ -94,7 +95,7 @@ Turn-based combat (`src/engine/battle_scene.py`) features:
 - **Turn order**: higher `spd` acts first (ties: player)
 - **Item targeting**: consumables open the party menu (`pending_item`); revive targets fainted mascots and clears `fainted`
 - **Type effectiveness**: Rock-paper-scissors style matchups (Kernel > Shell, Browser > Editor, etc.)
-- **Capture mechanics**: Package item with probability based on opponent HP; capped at `PARTY_MAX` (5, what the switch menu fits); duplicates allowed
+- **Capture mechanics**: Package item with probability based on opponent HP; party capped at `PARTY_MAX` (5, what the switch menu fits); beyond that captures go to the Repository (`STORAGE_MAX` 30; blocked with a message when both are full); duplicates allowed
 - **Party switching**: Can switch active mascot mid-battle if party has multiple members
 - **Trainer battles**: NPC-initiated battles against a multi-mascot opponent party (`is_trainer_battle=True`); captures are disabled and the opponent auto-switches on faint instead of the battle ending
 
@@ -130,7 +131,7 @@ All game constants live in `src/constants.py`:
 - **Map**: CSV tile grid + YAML per map in `assets/maps/`
 - Mascot sprites: species with a `sprite:` key in `assets/mascots.yaml` load that PNG via `mascots.get_sprite`; others fall back to the generated `placeholder` (Gopher, Elephpant, Konqi still do). NPCs draw from their `sprite` field (`overworld.load_overworld_sprite`, circle fallback) and the player has 4 facing frames
 - **Audio**: `src/engine/audio.py` wraps `pygame.mixer` (lazy init, every call a no-op if the mixer fails). Music per scene (`title`/`overworld`/`battle`), SFX generated in code. `BattleMessage` has an optional `sound` played when the message is shown. `M` toggles mute, saved as `muted` in the save
-- **Menus**: `src/engine/menu_screens.py` has `PartyScreen` (Mascots) and `BagScreen` (use items outside battle), pushed from the pause menu
+- **Menus**: `src/engine/menu_screens.py` has `PartyScreen` (Mascots) `BagScreen` (use items outside battle) and `RepositoryScreen` (deposit/withdraw between party and the storage box, saved as `storage`), pushed from the pause menu; tests in `test_repository.py`
 - **Fonts**: always use `src/engine/fonts.py` (`get_font(size)` cached, `wrap_text`); prefers `assets/sprites/pixel.ttf` (not shipped yet) and falls back to bold Arial
 
 ## Project Planning

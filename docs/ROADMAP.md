@@ -114,6 +114,12 @@ stat growth per species and learnsets in `mascots.yaml`. Saved party states gain
 `PARTY_MAX` is 5 because the switch menu fits 5 rows. Add a "Repository"
 storage box (Pokemon's PC) so captures beyond 5 aren't blocked.
 
+**Done:** `STORAGE_MAX` (30) box in `OverworldScene.storage`, saved as
+`storage` (old saves default to empty); overflow captures go to it via
+`BattleResult.storage_states`/`captured_to_storage`; `RepositoryScreen`
+(pause menu entry) deposits/withdraws (party keeps one healthy mascot, no
+withdraw into a full party).
+
 ### 2.6 Save versioning and slots
 - Add `"version"` to save data and explicit migrations. The current
   format-sniffing for old saves is ad hoc.

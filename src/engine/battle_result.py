@@ -17,3 +17,7 @@ class BattleResult:
     lost: bool = False  # whole player party fainted: move back to spawn
     reward: int = 0  # money for a trainer win
     captured_name: str | None = None  # species captured (already in party_states)
+    # Repository after battle (None: unchanged); a capture with a full party
+    # lands here instead of in party_states
+    storage_states: list | None = None
+    captured_to_storage: bool = False

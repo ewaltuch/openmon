@@ -10,6 +10,9 @@ FPS = 60
 # Largest party the battle switch menu can display
 PARTY_MAX = 5
 
+# Repository (storage box) capacity for mascots beyond the party
+STORAGE_MAX = 30
+
 # Game Boy 4-shade palette (lightest to darkest)
 GB_PALETTE = [
     (224, 248, 208),  # White

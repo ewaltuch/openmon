@@ -306,19 +306,22 @@ def test_captured_mascot_joins_at_full_hp_even_if_duplicate():
     assert scene.get_party_states()[-1]["hp"] == scene.party[-1].max_hp
 
 
-def test_capture_blocked_when_party_full():
-    from src.constants import PARTY_MAX
+def test_capture_blocked_when_party_and_storage_full():
+    from src.constants import PARTY_MAX, STORAGE_MAX
 
     inventory = InventoryManager()
     inventory.add_item("package", 1)
     states = [BattleScene(DummyManager()).make_mascot_state("Tux")] * PARTY_MAX
     scene = BattleScene(
-        DummyManager(), party_states=[dict(s) for s in states], inventory=inventory
+        DummyManager(),
+        party_states=[dict(s) for s in states],
+        inventory=inventory,
+        storage_states=[dict(states[0]) for _ in range(STORAGE_MAX)],
     )
 
     scene._try_capture()
 
-    assert scene.msg == "Your party is full!"
+    assert scene.msg == "Party and Repository are full!"
     assert inventory.get_item_count("package") == 1
 
 
