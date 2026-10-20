@@ -32,7 +32,8 @@ class MapData:
     spawn: tuple
     warps: list = field(default_factory=list)
     npcs: list = field(default_factory=list)
-    encounters: list | None = None  # None: use mascots.yaml's default table
+    # None: use mascots.yaml's default table; []: no wild encounters (interiors)
+    encounters: list | None = None
 
     def warp_at(self, tx, ty):
         for warp in self.warps:

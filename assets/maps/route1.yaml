@@ -16,3 +16,18 @@ npcs:
     dialogue:
       - "The grass on this route is full of Gophers."
       - "Head back north to return to town."
+  - id: route_trainer
+    name: Hazel
+    x: 10
+    y: 17
+    sprite: trainer
+    trainer: true
+    reward: 80
+    party:
+      - Gopher
+      - {name: Konqi, level: 7}
+    dialogue:
+      - "This route is my training ground!"
+      - "Ready for a battle?"
+    defeated_dialogue:
+      - "Nice moves! The grass is yours."

@@ -10,7 +10,6 @@
 | 2.1 (rest) | Player prompt for which move to forget; XP bar | S | Auto-forgetting the oldest move is a gameplay wart |
 | 2.2 | Trainer AI (effective/high-power moves), line-of-sight challenge | M | Unblocks Milestone 3; rewards already done |
 | 2.5 | Repository storage box | M | Captures past 5 are currently blocked; touches party/battle capture |
-| 2.3 (rest) | Interior map (house/shop) and a second trainer | S | Content, exercises warps; cheap |
 | 2.6 | Save versioning and 3 slots | M | Do last in M2: save format now stable (map, money, level, xp) |
 | 1.1 (rest) | Pixel font; art for Gopher/Elephpant/Konqi | S-M | Blocked: needs a verified OFL font and artwork; can run in parallel any time |
 
@@ -38,6 +37,7 @@ None.
 
 **2026-10-20: 2.3 Multiple maps and warps**
 - `assets/maps/` with town and route1 (CSV + YAML), fade warps both ways, per-map encounter tables, `map` in saves (old saves load into town), defeated trainers keyed `map:npc_id`
+- Content: `registry` interior (door in town, Grace moved inside, `encounters: []` = none), second trainer Hazel on route1, test that loads every map and checks warps pair up
 
 **2026-10-20: Milestone 1 mostly landed**
 - 1.1 SVG→PNG pipeline works (`make assets`), mascot/NPC/player sprites (font and 3 new species' art outstanding)

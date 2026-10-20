@@ -116,6 +116,7 @@ def test_bag_draws_money():
 def test_shop_npc_opens_shop():
     manager = SceneManager()
     scene = OverworldScene(manager)
+    scene.enter_map("registry")  # Grace lives inside the registry
     npc = next(n for n in scene.npcs if n.shop)
     assert scene.tilemap.is_walkable(npc.x, npc.y)
     scene.active_npc = npc

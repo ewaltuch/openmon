@@ -596,6 +596,8 @@ class OverworldScene:
             return
         if self.tilemap.tile_at(*self.player.tile) != GRASS:
             return
+        if self.map.encounters is not None and not self.map.encounters:
+            return  # an explicit empty table means no wild encounters here
         self.steps += 1
         if self.steps >= self.encounter_steps:
             from .battle_scene import BattleScene
