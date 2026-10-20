@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw
 from src.constants import GB_PALETTE, SCREEN_HEIGHT, SCREEN_WIDTH, SPRITE_DIR
 from src.overworld import GRASS, KEY_DIRECTIONS, TILE_SIZE, Player, TileMap
 
-from . import mascots
+from . import audio, mascots
 from .fonts import get_font, wrap_text
 from .save import SaveManager
 
@@ -34,6 +34,7 @@ class OverworldScene:
 
     def __init__(self, manager, inventory=None):
         self.manager = manager
+        audio.play_music("overworld")
         self.tile_images = self._generate_tiles()
         self.tilemap = TileMap(os.path.join(SPRITE_DIR, "tiles.csv"))
         # Initialize party as state dictionaries
@@ -227,6 +228,7 @@ class OverworldScene:
                 "party": self.party,
                 "inventory": self.inventory.to_dict(),
                 "defeated_npcs": defeated_npcs,
+                "muted": audio.muted,
             }
         )
         self.notification_text = "Game saved!"
@@ -268,6 +270,8 @@ class OverworldScene:
                         # Invalid state, reinitialize
                         self.party = self._initialize_party(["Tux"])
                         break
+
+            audio.set_muted(data.get("muted", False))
 
             if "inventory" in data:
                 self.inventory.from_dict(data["inventory"])
@@ -330,7 +334,9 @@ class OverworldScene:
             return
 
         if event.type == pygame.KEYDOWN and not self.active_dialogue:
-            if event.key == pygame.K_s:
+            if event.key == pygame.K_m:
+                audio.toggle_mute()
+            elif event.key == pygame.K_s:
                 self._save_game()
             elif event.key == pygame.K_l:
                 self._load_game()

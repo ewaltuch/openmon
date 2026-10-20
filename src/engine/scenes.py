@@ -5,6 +5,7 @@ Scene definitions for Open-Mon: Title, Overworld, Battle, Credits.
 import pygame
 
 from src.constants import GB_PALETTE
+from src.engine import audio
 from src.engine.fonts import get_font
 
 
@@ -23,6 +24,10 @@ class Scene:
 
 
 class TitleScene(Scene):
+    def __init__(self, manager):
+        super().__init__(manager)
+        audio.play_music("title")
+
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
             from .overworld_scene import OverworldScene

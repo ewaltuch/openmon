@@ -13,7 +13,7 @@ from collections import deque, namedtuple
 import pygame
 
 from src.constants import GB_PALETTE, PARTY_MAX, SCREEN_HEIGHT, SCREEN_WIDTH
-from src.engine import mascots
+from src.engine import audio, mascots
 from src.engine.fonts import get_font, wrap_text
 from src.engine.mascots import (  # noqa: F401 - re-exported for callers/tests
     ELEMENT_TYPES,
@@ -28,7 +28,9 @@ GRID_STEPS = {pygame.K_UP: -2, pygame.K_DOWN: 2, pygame.K_LEFT: -1, pygame.K_RIG
 
 # What the screen shows while a message is up
 BattleMessage = namedtuple(
-    "BattleMessage", "text player player_hp opponent opponent_hp"
+    "BattleMessage",
+    "text player player_hp opponent opponent_hp sound",
+    defaults=(None,),
 )
 
 BOX_H = 48
@@ -60,6 +62,7 @@ class BattleScene:
     ):
         self.manager = manager
         self.is_trainer_battle = is_trainer_battle
+        audio.play_music("battle")
 
         # Default party if none provided
         if party_states is None:
@@ -128,14 +131,27 @@ class BattleScene:
         self._status = text
         self._last_text = text
 
-    def _say(self, text):
-        """Queue a turn message, snapshotting what the screen should show."""
+    def _say(self, text, sound=None):
+        """Queue a turn message, snapshotting what the screen should show.
+
+        `sound` (an audio.SFX name) plays when the message is first shown.
+        """
         self.messages.append(
             BattleMessage(
-                text, self.player, self.player.hp, self.opponent, self.opponent.hp
+                text,
+                self.player,
+                self.player.hp,
+                self.opponent,
+                self.opponent.hp,
+                sound,
             )
         )
         self._last_text = text
+
+    @staticmethod
+    def _play_sound(message):
+        if message.sound:
+            audio.play_sfx(message.sound)
 
     @property
     def menu_names(self):
@@ -217,7 +233,7 @@ class BattleScene:
         """Apply one attack and narrate it."""
         dmg, multiplier = self._calc_damage(move, attacker, defender)
         defender.hp = max(0, defender.hp - dmg)
-        self._say(f"{attacker.name} used {move.name}!")
+        self._say(f"{attacker.name} used {move.name}!", "hit")
         if multiplier > 1.0:
             self._say("It's super effective!")
         elif multiplier < 1.0:
@@ -246,12 +262,14 @@ class BattleScene:
             self.manager.last_battle_party_states = self.get_party_states()
             if self._opponent_party_fainted():
                 self.manager.last_battle_won = True
+        audio.play_music("overworld")
         self.manager.pop()
 
     def _advance_message(self):
         if self.messages:
             self.messages.popleft()
         if self.messages:
+            self._play_sound(self.messages[0])
             return
         if self.battle_over:
             self._finish_battle()
@@ -276,10 +294,15 @@ class BattleScene:
             self.STATE_ITEM_SELECT: self._handle_item_select,
             self.STATE_PARTY_SELECT: self._handle_party_select,
         }
+        if event.key in GRID_STEPS:
+            audio.play_sfx("move")
+        elif event.key in CONFIRM_KEYS:
+            audio.play_sfx("confirm")
         handlers[self.state](event.key)
 
         # If the action produced narration, play it before continuing
         if self.messages:
+            self._play_sound(self.messages[0])
             self._next_state = self.state
             self.state = self.STATE_MESSAGE
 
@@ -411,7 +434,7 @@ class BattleScene:
                 self._opponent_attack()
 
     def _on_opponent_fainted(self):
-        self._say(f"{self.opponent.name} fainted!")
+        self._say(f"{self.opponent.name} fainted!", "faint")
         next_opponent = next((m for m in self.opponent_party if m.hp > 0), None)
         if next_opponent is None:
             if self.is_trainer_battle:
@@ -426,7 +449,7 @@ class BattleScene:
         self._attack(self.opponent, self.player, move)
         if self.player.hp <= 0:
             self.party_states[self.active_idx]["fainted"] = True
-            self._say(f"{self.player.name} fainted!")
+            self._say(f"{self.player.name} fainted!", "faint")
 
             # Check if all party members have fainted
             if self._check_all_fainted():
@@ -509,7 +532,7 @@ class BattleScene:
         # Simple probability: higher if opponent HP is low
         prob = max(0.2, 1.0 - self.opponent.hp / self.opponent.max_hp)
         if random.random() < prob:
-            self._say(f"You captured {self.opponent.name}!")
+            self._say(f"You captured {self.opponent.name}!", "capture")
             self.captured = True
 
             # The captured mascot joins at full HP, not with its battle damage
