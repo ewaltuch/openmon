@@ -21,6 +21,7 @@ from src.overworld import (
 
 from . import audio, mascots
 from .fonts import get_font, wrap_text
+from .inventory import STARTING_MONEY
 from .save import SaveManager
 
 INTERACT_KEYS = (pygame.K_SPACE, pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER)
@@ -153,7 +154,7 @@ class OverworldScene:
         hud_x = SCREEN_WIDTH - 80
         hud_y = 4
         hud_w = 76
-        hud_h = 30
+        hud_h = 40
 
         pygame.draw.rect(surface, GB_PALETTE[1], (hud_x, hud_y, hud_w, hud_h))
         pygame.draw.rect(surface, GB_PALETTE[3], (hud_x, hud_y, hud_w, hud_h), 1)
@@ -175,6 +176,9 @@ class OverworldScene:
 
         bar_x = hud_x + 4
         bar_y = hud_y + 22
+
+        money = font.render(f"${self.inventory.money}", True, GB_PALETTE[3])
+        surface.blit(money, (hud_x + 4, hud_y + 29))
 
         # Draw the background of the HP bar
         pygame.draw.rect(surface, GB_PALETTE[3], (bar_x, bar_y, bar_w, bar_h), 1)
@@ -245,6 +249,7 @@ class OverworldScene:
                 "player": {"x": self.player.x, "y": self.player.y},
                 "party": self.party,
                 "inventory": self.inventory.to_dict(),
+                "money": self.inventory.money,
                 "defeated_npcs": defeated_npcs,
                 "muted": audio.muted,
             }
@@ -293,6 +298,8 @@ class OverworldScene:
 
             if "inventory" in data:
                 self.inventory.from_dict(data["inventory"])
+            # Old saves have no money: start from the default amount
+            self.inventory.money = data.get("money", STARTING_MONEY)
 
             # Reset all trainers to undefeated, then restore from save
             for npc in self.npcs:
@@ -381,12 +388,21 @@ class OverworldScene:
                             inventory=self.inventory,
                             opponent_party=trainer_party,
                             is_trainer_battle=True,
+                            reward=self.active_npc.reward,
                         )
                         self.manager.push(battle)
                         # Marked defeated on return, and only if the player won
                         self._pending_trainer = self.active_npc
                     elif self.active_npc.heals:
                         self.heal_party()
+                    elif self.active_npc.shop:
+                        from .menu_screens import ShopScreen
+
+                        self.manager.push(
+                            ShopScreen(
+                                self.manager, self.inventory, self.active_npc.stock
+                            )
+                        )
                     # Close the dialogue box
                     self.active_dialogue = None
                     self.active_npc = None
@@ -448,6 +464,13 @@ class OverworldScene:
             won = getattr(self.manager, "last_battle_won", False)
             if won:
                 delattr(self.manager, "last_battle_won")
+            reward = getattr(self.manager, "last_battle_reward", 0)
+            if hasattr(self.manager, "last_battle_reward"):
+                delattr(self.manager, "last_battle_reward")
+            if won and reward:
+                self.inventory.money += reward
+                self.notification_text = f"Got ${reward}!"
+                self.notification_timer = 2
             if self._pending_trainer is not None:
                 if won:
                     self._pending_trainer.defeated = True

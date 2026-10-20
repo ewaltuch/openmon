@@ -2,6 +2,8 @@
 Tests for the inventory system in Open-Mon.
 """
 
+import pytest
+
 from src.engine.battle_scene import Mascot
 from src.engine.inventory import InventoryManager, Item
 
@@ -217,9 +219,9 @@ class TestInventoryManager:
     def test_add_invalid_item(self):
         """Test that adding an invalid item fails."""
         inventory = InventoryManager()
-        result = inventory.add_item("nonexistent_item", 5)
+        with pytest.raises(ValueError):
+            inventory.add_item("nonexistent_item", 5)
 
-        assert result is False
         assert inventory.get_item_count("nonexistent_item") == 0
 
     def test_backwards_compatibility_old_inventory_format(self):

@@ -102,7 +102,10 @@ stat growth per species and learnsets in `mascots.yaml`. Saved party states gain
 - Decide on Tiled `.tmx` (`pytmx`) once there are more than about 5 maps. CSV
   plus YAML is fine until then.
 
-### 2.4 Items, money and a shop
+### 2.4 Items, money and a shop (done)
+- Done: items in `assets/items.yaml` with prices, money in `InventoryManager`
+  (saved, default 100), `ShopScreen`, shop NPC, trainer `reward`. Status
+  cures still wait for status effects.
 - Move item definitions out of `inventory.py` into YAML (same pattern as
   mascots).
 - Money, a shop NPC, and new items (status cures once status effects exist).

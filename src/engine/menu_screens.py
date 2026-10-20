@@ -9,8 +9,8 @@ picked up by the next save.
 import pygame
 
 from src.constants import GB_PALETTE
-from src.engine.fonts import get_font
-from src.engine.inventory import Item
+from src.engine.fonts import get_font, wrap_text
+from src.engine.inventory import Item, get_item
 
 CONFIRM_KEYS = (pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER)
 BACK_KEYS = (pygame.K_x, pygame.K_ESCAPE)
@@ -183,6 +183,10 @@ class BagScreen:
             _draw_party_rows(surface, self.party, self.target_idx)
             return
         surface.blit(title_font.render("Bag", True, GB_PALETTE[3]), (6, 2))
+        money = f"${self.inventory.money}"
+        surface.blit(
+            font.render(money, True, GB_PALETTE[3]), (234 - font.size(money)[0], 3)
+        )
         items = self._items()
         if not items:
             surface.blit(font.render("Empty", True, GB_PALETTE[2]), (10, 24))
@@ -201,3 +205,151 @@ class BagScreen:
                 surface.blit(font.render(line, True, GB_PALETTE[3]), (6, 112 + j * 12))
         if self.message:
             surface.blit(font.render(self.message, True, GB_PALETTE[3]), (6, 144))
+
+
+class ShopScreen:
+    """Buy and sell items. Buying costs the item's price; selling pays half."""
+
+    MODE_MAIN = "main"
+    MODE_LIST = "list"
+    MODE_QTY = "qty"
+    MAIN_OPTIONS = ("Buy", "Sell", "Exit")
+    ROWS = 6
+
+    def __init__(self, manager, inventory, stock):
+        self.manager = manager
+        self.inventory = inventory
+        self.stock = list(stock)
+        for item_id in self.stock:
+            get_item(item_id)  # Fail early on unknown stock
+        self.mode = self.MODE_MAIN
+        self.buying = True
+        self.main_idx = 0
+        self.list_idx = 0
+        self.qty = 1
+        self.message = "Welcome! Buy or sell?"
+
+    def _entries(self):
+        """(item, price) rows for the current list: stock, or sellable bag items."""
+        if self.buying:
+            return [(get_item(i), get_item(i).price) for i in self.stock]
+        return [
+            (item, item.sell_price)
+            for item, _ in self.inventory.get_all_items()
+            if item.type != Item.TYPE_KEY
+        ]
+
+    def _max_qty(self, item, price):
+        if self.buying:
+            return self.inventory.money // price if price else 99
+        return self.inventory.get_item_count(item.id)
+
+    def handle_event(self, event):
+        if event.type != pygame.KEYDOWN:
+            return
+        key = event.key
+        if self.mode == self.MODE_MAIN:
+            if key in BACK_KEYS:
+                self.manager.pop()
+            elif key in (pygame.K_UP, pygame.K_DOWN):
+                step = -1 if key == pygame.K_UP else 1
+                self.main_idx = (self.main_idx + step) % len(self.MAIN_OPTIONS)
+            elif key in CONFIRM_KEYS:
+                choice = self.MAIN_OPTIONS[self.main_idx]
+                if choice == "Exit":
+                    self.manager.pop()
+                else:
+                    self.buying = choice == "Buy"
+                    self.list_idx = 0
+                    self.mode = self.MODE_LIST
+                    self.message = ""
+        elif self.mode == self.MODE_LIST:
+            entries = self._entries()
+            if key in BACK_KEYS:
+                self.mode = self.MODE_MAIN
+                self.message = ""
+            elif key in (pygame.K_UP, pygame.K_DOWN) and entries:
+                step = -1 if key == pygame.K_UP else 1
+                self.list_idx = (self.list_idx + step) % len(entries)
+            elif key in CONFIRM_KEYS and entries:
+                item, price = entries[self.list_idx]
+                if self._max_qty(item, price) < 1:
+                    self.message = "Not enough money!" if self.buying else "None left!"
+                    return
+                self.qty = 1
+                self.mode = self.MODE_QTY
+                self.message = ""
+        elif self.mode == self.MODE_QTY:
+            item, price = self._entries()[self.list_idx]
+            top = self._max_qty(item, price)
+            if key in BACK_KEYS:
+                self.mode = self.MODE_LIST
+            elif key in (pygame.K_UP, pygame.K_RIGHT):
+                self.qty = min(top, self.qty + 1)
+            elif key in (pygame.K_DOWN, pygame.K_LEFT):
+                self.qty = max(1, self.qty - 1)
+            elif key in CONFIRM_KEYS:
+                self._confirm(item)
+
+    def _confirm(self, item):
+        if self.buying:
+            ok = self.inventory.buy(item.id, self.qty)
+            self.message = (
+                f"Bought {self.qty} {item.name}!" if ok else "Not enough money!"
+            )
+        else:
+            ok = self.inventory.sell(item.id, self.qty)
+            self.message = f"Sold {self.qty} {item.name}!" if ok else "Can't sell that!"
+        self.mode = self.MODE_LIST
+        self.list_idx = min(self.list_idx, max(0, len(self._entries()) - 1))
+
+    def update(self, dt):
+        pass
+
+    def draw(self, surface):
+        surface.fill(GB_PALETTE[0])
+        _box(surface, (0, 0, 240, 160))
+        title_font = get_font(12)
+        font = get_font(10)
+        dark, mid = GB_PALETTE[3], GB_PALETTE[2]
+        surface.blit(title_font.render("Shop", True, dark), (6, 2))
+        money = f"${self.inventory.money}"
+        surface.blit(font.render(money, True, dark), (234 - font.size(money)[0], 3))
+        if self.mode == self.MODE_MAIN:
+            for i, name in enumerate(self.MAIN_OPTIONS):
+                color = dark if i == self.main_idx else mid
+                marker = ">" if i == self.main_idx else " "
+                surface.blit(
+                    font.render(f"{marker}{name}", True, color), (6, 22 + i * 14)
+                )
+        else:
+            entries = self._entries()
+            if not entries:
+                surface.blit(font.render("Nothing to sell", True, mid), (10, 22))
+            first = max(0, min(self.list_idx - self.ROWS + 1, len(entries) - self.ROWS))
+            if self.list_idx < first:
+                first = self.list_idx
+            for row, (item, price) in enumerate(entries[first : first + self.ROWS]):
+                i = first + row
+                y = 20 + row * 12
+                color = dark if i == self.list_idx else mid
+                marker = ">" if i == self.list_idx else " "
+                surface.blit(font.render(f"{marker}{item.name}", True, color), (6, y))
+                owned = f"x{self.inventory.get_item_count(item.id)}"
+                surface.blit(font.render(owned, True, color), (130, y))
+                cost = f"${price}"
+                surface.blit(
+                    font.render(cost, True, color), (234 - font.size(cost)[0], y)
+                )
+            if entries:
+                desc = entries[self.list_idx][0].description
+                for j, line in enumerate(wrap_text(font, desc, 226)[:2]):
+                    surface.blit(font.render(line, True, dark), (6, 96 + j * 12))
+        if self.mode == self.MODE_QTY:
+            item, price = self._entries()[self.list_idx]
+            verb = "Buy" if self.buying else "Sell"
+            line = f"{verb} {item.name} x{self.qty} = ${price * self.qty}"
+            surface.blit(font.render(line, True, dark), (6, 126))
+            surface.blit(font.render("Up/Down: amount  Z: ok", True, mid), (6, 138))
+        elif self.message:
+            surface.blit(font.render(self.message, True, dark), (6, 144))
