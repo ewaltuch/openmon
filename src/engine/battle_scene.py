@@ -3,8 +3,8 @@ BattleScene implementation for Open-Mon: simple turn-based battle, UI, capture.
 
 Game logic resolves a whole turn immediately; what happened is queued as
 BattleMessages (text plus an HP snapshot) that the player steps through with
-Z, so the screen shows the turn in order. Animations and sound effects can
-hook into the same queue later.
+Z, so the screen shows the turn in order. Sounds and hit effects ride on the
+same queue: a message can carry a `sound` and an `effect`.
 """
 
 import random
@@ -29,9 +29,22 @@ GRID_STEPS = {pygame.K_UP: -2, pygame.K_DOWN: 2, pygame.K_LEFT: -1, pygame.K_RIG
 # What the screen shows while a message is up
 BattleMessage = namedtuple(
     "BattleMessage",
-    "text player player_hp opponent opponent_hp sound",
-    defaults=(None,),
+    "text player player_hp opponent opponent_hp sound effect",
+    defaults=(None, None),
 )
+
+# Characters revealed per second by the typewriter text; 0 shows text at once
+TEXT_CPS = 45
+PROMPT_BLINK = 0.4  # seconds per on/off phase of the "next" arrow
+EFFECT_TIME = 0.4  # seconds a hit flash/shake lasts
+HIT_PLAYER = "hit_player"
+HIT_OPPONENT = "hit_opponent"
+
+# Damage = power * atk / defense * DAMAGE_SCALE * type multiplier * random
+DAMAGE_SCALE = 0.7
+DAMAGE_RANDOM = (0.85, 1.0)
+# Own generator so tests can seed damage without disturbing other randomness
+damage_rng = random.Random()
 
 BOX_H = 48
 BOX_Y = SCREEN_HEIGHT - BOX_H
@@ -109,6 +122,7 @@ class BattleScene:
             self.opponent_party = [self.opponent]
             self._say(f"A wild {self.opponent.name} appeared!")
 
+        self._reset_message_timers()
         self.menu_idx = 0
         self.state = self.STATE_MESSAGE
         self.captured = False
@@ -131,10 +145,11 @@ class BattleScene:
         self._status = text
         self._last_text = text
 
-    def _say(self, text, sound=None):
+    def _say(self, text, sound=None, effect=None):
         """Queue a turn message, snapshotting what the screen should show.
 
-        `sound` (an audio.SFX name) plays when the message is first shown.
+        `sound` (an audio.SFX name) plays when the message is first shown;
+        `effect` (HIT_PLAYER / HIT_OPPONENT) flashes and shakes that sprite.
         """
         self.messages.append(
             BattleMessage(
@@ -144,14 +159,26 @@ class BattleScene:
                 self.opponent,
                 self.opponent.hp,
                 sound,
+                effect,
             )
         )
         self._last_text = text
 
-    @staticmethod
-    def _play_sound(message):
+    def _reset_message_timers(self):
+        self._text_pos = 0.0
+        self._effect_t = 0.0
+        self._clock = 0.0
+
+    def _show(self, message):
+        """A queued message just became the current one."""
+        self._reset_message_timers()
         if message.sound:
             audio.play_sfx(message.sound)
+
+    def _text_done(self):
+        if not self.messages:
+            return True
+        return TEXT_CPS <= 0 or self._text_pos >= len(self.messages[0].text)
 
     @property
     def menu_names(self):
@@ -224,16 +251,22 @@ class BattleScene:
         return all(m.hp <= 0 for m in self.opponent_party)
 
     def _calc_damage(self, move, attacker, defender):
-        """Return (damage, type multiplier) for attacker using move on defender."""
+        """Return (damage, type multiplier) for attacker using move on defender.
+
+        power * atk / defense, scaled, times type effectiveness and a small
+        random factor (seed `damage_rng` in tests); always at least 1.
+        """
         multiplier = TYPE_EFFECTIVENESS.get((move.type, defender.type), 1.0)
-        dmg = max(1, int((move.power + attacker.atk - defender.defense) * multiplier))
-        return dmg, multiplier
+        base = move.power * attacker.atk / max(1, defender.defense) * DAMAGE_SCALE
+        dmg = int(base * multiplier * damage_rng.uniform(*DAMAGE_RANDOM))
+        return max(1, dmg), multiplier
 
     def _attack(self, attacker, defender, move):
         """Apply one attack and narrate it."""
         dmg, multiplier = self._calc_damage(move, attacker, defender)
         defender.hp = max(0, defender.hp - dmg)
-        self._say(f"{attacker.name} used {move.name}!", "hit")
+        effect = HIT_PLAYER if defender is self.player else HIT_OPPONENT
+        self._say(f"{attacker.name} used {move.name}!", "hit", effect)
         if multiplier > 1.0:
             self._say("It's super effective!")
         elif multiplier < 1.0:
@@ -269,7 +302,7 @@ class BattleScene:
         if self.messages:
             self.messages.popleft()
         if self.messages:
-            self._play_sound(self.messages[0])
+            self._show(self.messages[0])
             return
         if self.battle_over:
             self._finish_battle()
@@ -282,7 +315,10 @@ class BattleScene:
             return
         if self.state == self.STATE_MESSAGE:
             if event.key in CONFIRM_KEYS or event.key == pygame.K_x:
-                self._advance_message()
+                if self._text_done():
+                    self._advance_message()
+                else:
+                    self._text_pos = len(self.messages[0].text)
             return
         if self.battle_over:
             self._finish_battle()
@@ -302,7 +338,7 @@ class BattleScene:
 
         # If the action produced narration, play it before continuing
         if self.messages:
-            self._play_sound(self.messages[0])
+            self._show(self.messages[0])
             self._next_state = self.state
             self.state = self.STATE_MESSAGE
 
@@ -548,7 +584,10 @@ class BattleScene:
             self._opponent_attack()
 
     def update(self, dt):
-        pass
+        self._clock += dt
+        self._effect_t += dt
+        if self.messages and not self._text_done():
+            self._text_pos += TEXT_CPS * dt
 
     # --- Drawing ---
 
@@ -586,10 +625,32 @@ class BattleScene:
                 surface.blit(font.render(">", True, GB_PALETTE[3]), (lx, ly))
             surface.blit(font.render(label, True, color), (lx + 10, ly))
 
-    def _draw_text_lines(self, surface, text, x, y, width):
+    def _draw_text_lines(self, surface, text, x, y, width, reveal=None):
+        """Draw wrapped text; `reveal` limits how many characters show."""
         font = get_font(12)
         for i, line in enumerate(wrap_text(font, text, width)[:3]):
+            if reveal is not None:
+                line = line[: max(0, reveal)]
+                reveal -= len(line) + 1  # wrapping swallowed a space
             surface.blit(font.render(line, True, GB_PALETTE[3]), (x, y + i * LINE_H))
+
+    def _draw_prompt(self, surface):
+        """Blinking down-arrow at the box corner: a message waits for Z."""
+        if int(self._clock / PROMPT_BLINK) % 2:
+            return
+        x, y = SCREEN_WIDTH - 14, SCREEN_HEIGHT - 10
+        pygame.draw.polygon(
+            surface, GB_PALETTE[3], [(x, y), (x + 6, y), (x + 3, y + 4)]
+        )
+
+    def _sprite_offset(self, view, side):
+        """(dx, dy, visible) for a sprite while a hit effect plays on it."""
+        if self.state != self.STATE_MESSAGE or view.effect != side:
+            return 0, 0, True
+        if self._effect_t >= EFFECT_TIME:
+            return 0, 0, True
+        phase = int(self._effect_t / 0.05)
+        return (2 if phase % 2 else -2), 0, phase % 3 != 2
 
     def draw(self, surface):
         menu_font = msg_font = get_font(12)
@@ -605,17 +666,26 @@ class BattleScene:
         surface.fill(GB_PALETTE[0])
         # Opponent: info top-left, sprite top-right
         self._draw_info(surface, view.opponent, view.opponent_hp, 8, 4)
-        if view.opponent_hp > 0:
-            surface.blit(mascots.get_sprite(view.opponent.name, SPRITE_SCALE), (160, 4))
+        dx, dy, visible = self._sprite_offset(view, HIT_OPPONENT)
+        if view.opponent_hp > 0 and visible:
+            sprite = mascots.get_sprite(view.opponent.name, SPRITE_SCALE)
+            surface.blit(sprite, (160 + dx, 4 + dy))
         # Player: sprite bottom-left, info on the right
-        if view.player_hp > 0:
-            surface.blit(mascots.get_sprite(view.player.name, SPRITE_SCALE), (16, 46))
+        dx, dy, visible = self._sprite_offset(view, HIT_PLAYER)
+        if view.player_hp > 0 and visible:
+            sprite = mascots.get_sprite(view.player.name, SPRITE_SCALE)
+            surface.blit(sprite, (16 + dx, 46 + dy))
         self._draw_info(surface, view.player, view.player_hp, 120, 62)
 
         box = (0, BOX_Y, SCREEN_WIDTH, BOX_H)
         if self.state == self.STATE_MESSAGE:
             self._draw_box(surface, box)
-            self._draw_text_lines(surface, view.text, 8, BOX_Y + 4, SCREEN_WIDTH - 16)
+            reveal = None if TEXT_CPS <= 0 else int(self._text_pos)
+            self._draw_text_lines(
+                surface, view.text, 8, BOX_Y + 4, SCREEN_WIDTH - 16, reveal
+            )
+            if self._text_done():
+                self._draw_prompt(surface)
         elif self.state == self.STATE_MENU:
             self._draw_box(surface, box)
             status = self._status or f"What will {self.player.name} do?"

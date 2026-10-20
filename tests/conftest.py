@@ -19,3 +19,9 @@ def pygame_display():
     pygame.init()
     pygame.display.set_mode((240, 160))
     yield
+
+
+@pytest.fixture(autouse=True)
+def instant_battle_text(monkeypatch):
+    """Battle text appears at once, so one Z press advances one message."""
+    monkeypatch.setattr("src.engine.battle_scene.TEXT_CPS", 0)

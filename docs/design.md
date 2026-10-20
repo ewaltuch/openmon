@@ -19,6 +19,15 @@ Unlisted pairs (including same-type) are 1.0.
 
 The source of truth is `type_effectiveness` in `assets/mascots.yaml`.
 
+## Damage
+
+    damage = max(1, int(power * atk / defense * 0.7 * type multiplier * r))
+
+`r` is a random factor, uniform in 0.85-1.0 (`battle_scene.damage_rng`, seed it
+in tests). Move power matters in proportion, and atk against defense scales
+the whole hit. With current stats a typical neutral hit takes a quarter of a
+mascot's HP, so a KO takes roughly 3-8 hits (more against resisted types).
+
 ## Roster
 
 | Species    | Type    |

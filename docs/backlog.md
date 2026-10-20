@@ -7,7 +7,6 @@
 | # | Task | Notes |
 |---|------|-------|
 | 1.1 (rest) | Pixel font; real sprites for Gopher/Elephpant/Konqi | No verified OFL font source yet |
-| 1.5 | Battle feel | Damage formula review |
 
 Then Milestone 2, starting with **2.1 Progression (XP and levels)**.
 
@@ -16,6 +15,9 @@ Then Milestone 2, starting with **2.1 Progression (XP and levels)**.
 None.
 
 ## Done
+
+**1.5 Battle feel**
+- Pokemon-like damage formula (seedable), typewriter text with blinking prompt, hit flash/shake via `BattleMessage.effect`
 
 **2026-10-20: Milestone 1 mostly landed**
 - 1.1 SVG→PNG pipeline works (`make assets`), mascot/NPC/player sprites (font and 3 new species' art outstanding)

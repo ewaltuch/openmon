@@ -73,11 +73,11 @@ against something, covered by a test that loads every species.
 - Pause menu entries: **Mascots** (party view) and **Bag** (use healing items
   outside battle; reuse the battle's party-target logic).
 
-### 1.5 Battle feel
-- Review the damage formula. It is flat `power + atk - defense`, so stats
-  matter more than move power.
-- Text scroll and a small "▼" prompt on messages; a hit flash or shake driven
-  by the message queue.
+### 1.5 Battle feel (done)
+- Done: damage is `power * atk / defense` scaled, with type multiplier and a
+  seedable random factor (see `docs/design.md`).
+- Done: typewriter text and a blinking "▼" prompt; Z completes scrolling text
+  first. Hit flash/shake via `BattleMessage.effect`.
 - Wild opponents keep picking moves at random; trainer AI comes in 2.2.
 
 ---
