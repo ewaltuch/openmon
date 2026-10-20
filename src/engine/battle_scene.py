@@ -445,7 +445,7 @@ class BattleScene:
         if item_idx >= len(items):
             return
 
-        item, quantity = items[item_idx]
+        item, _quantity = items[item_idx]
 
         # Handle packages (capture)
         if item.type == item.TYPE_PACKAGE:
@@ -518,7 +518,7 @@ class BattleScene:
             self.party_states.append(captured_state)
 
             # Persist captured mascot name on the manager for the overworld
-            setattr(self.manager, "captured_mascot_name", self.opponent.name)
+            self.manager.captured_mascot_name = self.opponent.name
             self.battle_over = True
         else:
             self._say("Capture failed!")

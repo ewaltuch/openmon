@@ -8,7 +8,7 @@ saves; hydrate() turns a state into a Mascot for battle.
 
 import os
 import random
-from functools import lru_cache
+from functools import cache
 
 import pygame
 import yaml
@@ -107,7 +107,7 @@ def make_mascot(name):
     return hydrate(make_state(name))
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_sprite(name, scale=1):
     """Battle sprite for a species, generated once per scale and shared."""
     if scale != 1:
