@@ -40,7 +40,7 @@ CI (`.github/workflows/ci.yml`) runs ruff, black --check, and pytest on every pu
 make assets                     # Build all sprites and audio assets
 ```
 
-The Makefile converts SVG mascot graphics to Game Boy-style PNGs (`scripts/svg2gb.py`) and processes music from BeepBox JSON to WAV (`scripts/beepbox2wav.py`). SVG sources live in `mascots/` (32x32 battle sprites) and `mascots/overworld/` (8x8 NPC and player-facing sprites); the generated PNGs are committed so the game and CI don't need to build them. `svg2gb.py` takes `input.svg output.png [size]`. There is no `music/` source dir: audio is generated in code (`src/engine/audio.py`). `cairosvg` is in the optional `tools` extra (`pip install -e .[tools]`). The game doesn't need it to run.
+The Makefile converts SVG mascot graphics to Game Boy-style PNGs (`scripts/svg2gb.py`). SVG sources live in `mascots/` (32x32 battle sprites) and `mascots/overworld/` (8x8 NPC and player-facing sprites); the generated PNGs are committed so the game and CI don't need to build them. `svg2gb.py` takes `input.svg output.png [size]`. There is no `music/` source dir: audio is generated in code (`src/engine/audio.py`). `cairosvg` is in the optional `tools` extra (`pip install -e .[tools]`). The game doesn't need it to run.
 
 ## Architecture
 
