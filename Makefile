@@ -1,6 +1,6 @@
 # Makefile for Open-Mon asset pipeline
 # Needs cairosvg: pip install -e .[tools]
-# Audio is handled separately (scripts/beepbox2wav.py).
+# Audio is generated in code (src/engine/audio.py); nothing to build here.
 
 PYTHON ?= python
 MASCOTS := $(basename $(notdir $(wildcard mascots/*.svg)))

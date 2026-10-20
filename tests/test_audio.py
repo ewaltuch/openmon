@@ -105,3 +105,14 @@ def test_battle_menu_sfx():
     battle.handle_event(key(pygame.K_RIGHT))
     battle.handle_event(key(pygame.K_z))
     assert audio.played[:2] == ["move", "confirm"]
+
+
+def test_saved_mute_applied_at_launch():
+    from src.engine.game import Game
+
+    SaveManager.save({"muted": True})
+    Game()
+    assert audio.muted
+    SaveManager.save({"muted": False})
+    Game()
+    assert not audio.muted

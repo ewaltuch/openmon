@@ -42,7 +42,7 @@ None.
 **2026-10-20: Milestone 1 mostly landed**
 - 1.1 SVG→PNG pipeline works (`make assets`), mascot/NPC/player sprites (font and 3 new species' art outstanding)
 - 1.2 Roster of 6, full type cycle, `docs/design.md` (per-area encounter tables wait for 2.3)
-- 1.3 Audio module, per-scene music, SFX via `BattleMessage.sound`, mute (`beepbox2wav.py` unverified; mute only applied on load)
+- 1.3 Audio module, per-scene music, SFX via `BattleMessage.sound`, mute; saved mute applied at launch; stale beepbox2wav script removed (music is generated in code)
 - 1.4 Title menu with Continue, credits, Mascots and Bag pause screens
 - Fixed ruff CI errors
 
