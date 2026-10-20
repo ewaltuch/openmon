@@ -129,8 +129,12 @@ def get_sprite(name, scale=1):
     return pygame.image.fromstring(img.tobytes(), img.size, img.mode)
 
 
-def roll_wild_encounter(rng=random):
-    """Pick a wild species name using the encounter table weights."""
-    names = [e["species"] for e in WILD_ENCOUNTERS]
-    weights = [e["weight"] for e in WILD_ENCOUNTERS]
+def roll_wild_encounter(rng=random, table=None):
+    """Pick a wild species name using an encounter table's weights.
+
+    table is a map's own list; None falls back to the default WILD_ENCOUNTERS.
+    """
+    table = table or WILD_ENCOUNTERS
+    names = [e["species"] for e in table]
+    weights = [e["weight"] for e in table]
     return rng.choices(names, weights=weights)[0]

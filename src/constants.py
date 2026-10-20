@@ -21,6 +21,8 @@ GB_PALETTE = [
 # Asset paths
 ASSET_DIR = "assets/"
 SPRITE_DIR = ASSET_DIR + "sprites/"
+MAP_DIR = ASSET_DIR + "maps/"
+DEFAULT_MAP = "town"
 SFX_DIR = ASSET_DIR + "sfx/"
 MUSIC_DIR = ASSET_DIR + "music/"
 

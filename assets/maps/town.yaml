@@ -1,0 +1,40 @@
+name: Town
+tiles: town.csv
+spawn: [2, 2]
+# No encounters key: falls back to wild_encounters in mascots.yaml
+warps:
+  - {x: 14, y: 15, to: route1, tx: 14, ty: 1, facing: down}
+npcs:
+  - id: npc_1
+    name: Linus
+    x: 5
+    y: 8
+    sprite: tux
+    heals: true
+    dialogue:
+      - "Welcome to Open-Mon!"
+      - "Did you know you can capture mascots with Packages?"
+      - "Let me patch up your mascots."
+  - id: npc_2
+    name: Ada
+    x: 20
+    y: 12
+    sprite: bsd
+    dialogue:
+      - "I'm Ada, the code wizard."
+      - "Try using Editor-type moves for a surprise!"
+  - id: trainer_1
+    name: Richard
+    x: 8
+    y: 10
+    sprite: trainer
+    trainer: true
+    party:
+      - "BSD Daemon"
+      - "Tux"
+    dialogue:
+      - "Hey! I'm a trainer!"
+      - "Let's battle!"
+    defeated_dialogue:
+      - "You're really strong!"
+      - "I need to train more..."
