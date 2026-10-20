@@ -95,6 +95,7 @@ Turn-based combat (`src/engine/battle_scene.py`) features:
 - **Item targeting**: consumables open the party menu (`pending_item`); revive targets fainted mascots and clears `fainted`
 - **Type effectiveness**: Rock-paper-scissors style matchups (Kernel > Shell, Browser > Editor, etc.)
 - **Capture mechanics**: Package item with probability based on opponent HP; capped at `PARTY_MAX` (5, what the switch menu fits); duplicates allowed
+- **Move learning**: a full moveset (4) prompts via `STATE_FORGET` (the message carries `learn=(mascot, move)`; the new move is the last row, X declines). The chosen moveset is saved as `moves` (names) in the party state; `hydrate` falls back to the learnset-derived moves when absent. The player info box has an XP bar (`mascots.xp_fraction`)
 - **Party switching**: Can switch active mascot mid-battle if party has multiple members
 - **Trainer battles**: NPC-initiated battles against a multi-mascot opponent party (`is_trainer_battle=True`); captures are disabled and the opponent auto-switches on faint instead of the battle ending
 

@@ -113,19 +113,6 @@ def test_learning_into_free_slot_does_not_forget():
     assert scene.player.moves[-1].name == "Sudo"
 
 
-def test_full_moveset_forgets_oldest_when_learning():
-    scene = _scene(player_level=13, name="Tux")
-    assert len(scene.player.moves) == 4
-    first = scene.player.moves[0].name
-    scene.messages.clear()
-    scene._gain_xp(scene.player, mascots.xp_to_next(13))
-    texts = _texts(scene)
-    assert f"Tux forgot {first}!" in texts
-    assert "Tux learned Kernel Panic!" in texts
-    assert len(scene.player.moves) == 4
-    assert scene.player.moves[0].name != first
-
-
 def test_xp_shared_between_participants_and_fainted_get_none():
     def two_party():
         return BattleScene(

@@ -36,7 +36,7 @@ the species' `growth` (rounded). `xp` counts within the current level and
 `xp_yield * level / 5` (x1.5 from trainers), split among the party members
 that fought it and are still standing. A level-up raises HP by the max-HP gain.
 A `learnset` maps levels to moves; a mascot knows the newest 4, so learning a
-fifth forgets the oldest. Wild levels come from `wild_encounters` (`level` is a
+fifth opens a "Forget which move?" menu (the new move is the last row; picking it or pressing X declines). The chosen moveset is saved as `moves` (names) in the party state; states without it use the derived learnset. The battle info box shows an XP bar under the player's HP. Wild levels come from `wild_encounters` (`level` is a
 number or `[min, max]`); trainer party entries are a name (level 5) or
 `{name, level}`.
 

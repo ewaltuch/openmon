@@ -94,6 +94,12 @@ def learnset_moves(name, level):
     return known[-MAX_MOVES:]
 
 
+def moves_from_names(name, names):
+    """Learnset entries for saved move names (species-only, unknown skipped)."""
+    by_name = {m["name"]: m for m in species(name)["learnset"]}
+    return [by_name[n] for n in names if n in by_name][:MAX_MOVES]
+
+
 def moves_learned_at(name, level):
     """Learnset entries that unlock exactly at this level."""
     return [m for m in species(name)["learnset"] if m["level"] == level]
@@ -102,6 +108,13 @@ def moves_learned_at(name, level):
 def xp_to_next(level):
     """XP needed to go from `level` to the next (xp counts within a level)."""
     return 3 * level * level
+
+
+def xp_fraction(level, xp):
+    """Progress through the current level, 0.0 to 1.0 (full at max level)."""
+    if level >= MAX_LEVEL:
+        return 0.0
+    return max(0.0, min(1.0, xp / xp_to_next(level)))
 
 
 def xp_yield(name, level, trainer=False):
@@ -161,6 +174,10 @@ def wild_level(name, rng=random):
 def hydrate(state):
     """Create a battle Mascot from a state dict; stats come from the state."""
     normalize_state(state)
+    # A saved moveset (chosen via the forget prompt) wins over the derived one
+    known = moves_from_names(state["name"], state.get("moves") or [])
+    if not known:
+        known = learnset_moves(state["name"], state["level"])
     mascot = Mascot(
         name=state["name"],
         hp=state["max_hp"],
@@ -168,10 +185,7 @@ def hydrate(state):
         defense=state["defense"],
         spd=state["spd"],
         sprite=get_sprite(state["name"]),
-        moves=[
-            Move(m["name"], m["power"], m["type"])
-            for m in learnset_moves(state["name"], state["level"])
-        ],
+        moves=[Move(m["name"], m["power"], m["type"]) for m in known],
         type_=state["type"],
         level=state["level"],
         xp=state["xp"],

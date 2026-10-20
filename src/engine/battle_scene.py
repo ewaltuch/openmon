@@ -30,8 +30,8 @@ GRID_STEPS = {pygame.K_UP: -2, pygame.K_DOWN: 2, pygame.K_LEFT: -1, pygame.K_RIG
 # What the screen shows while a message is up
 BattleMessage = namedtuple(
     "BattleMessage",
-    "text player player_hp opponent opponent_hp sound effect",
-    defaults=(None, None),
+    "text player player_hp opponent opponent_hp sound effect learn",
+    defaults=(None, None, None),
 )
 
 # Characters revealed per second by the typewriter text; 0 shows text at once
@@ -64,6 +64,7 @@ class BattleScene:
     STATE_ITEM_SELECT = "item_select"
     STATE_PARTY_SELECT = "party_select"
     STATE_MESSAGE = "message"
+    STATE_FORGET = "forget"
 
     def __init__(
         self,
@@ -137,6 +138,8 @@ class BattleScene:
         self.item_idx = 0
         self.party_select_idx = 0
         self.forced_switch = False
+        self.forget_idx = 0
+        self._learning = None  # (mascot, new Move) while the forget menu is up
         self.inventory = inventory
         self.pending_item = None
         # Party indices that have fought the current opponent (they share XP)
@@ -153,11 +156,12 @@ class BattleScene:
         self._status = text
         self._last_text = text
 
-    def _say(self, text, sound=None, effect=None):
+    def _say(self, text, sound=None, effect=None, learn=None):
         """Queue a turn message, snapshotting what the screen should show.
 
         `sound` (an audio.SFX name) plays when the message is first shown;
-        `effect` (HIT_PLAYER / HIT_OPPONENT) flashes and shakes that sprite.
+        `effect` (HIT_PLAYER / HIT_OPPONENT) flashes and shakes that sprite;
+        `learn` (mascot, move) opens the forget-a-move menu once it is read.
         """
         self.messages.append(
             BattleMessage(
@@ -168,6 +172,7 @@ class BattleScene:
                 self.opponent.hp,
                 sound,
                 effect,
+                learn,
             )
         )
         self._last_text = text
@@ -222,6 +227,7 @@ class BattleScene:
                     "defense": mascot.defense,
                     "spd": mascot.spd,
                     "type": mascot.type,
+                    "moves": [m.name for m in mascot.moves],
                     "fainted": self.party_states[i].get("fainted", False),
                 }
             )
@@ -311,8 +317,14 @@ class BattleScene:
         self.manager.pop()
 
     def _advance_message(self):
+        learn = None
         if self.messages:
-            self.messages.popleft()
+            learn = self.messages.popleft().learn
+        if learn:
+            self._learning = learn
+            self.forget_idx = mascots.MAX_MOVES  # default: keep the old moves
+            self.state = self.STATE_FORGET
+            return
         if self.messages:
             self._show(self.messages[0])
             return
@@ -331,6 +343,9 @@ class BattleScene:
                     self._advance_message()
                 else:
                     self._text_pos = len(self.messages[0].text)
+            return
+        if self.state == self.STATE_FORGET:
+            self._handle_forget(event.key)
             return
         if self.battle_over:
             self._finish_battle()
@@ -353,6 +368,39 @@ class BattleScene:
             self._show(self.messages[0])
             self._next_state = self.state
             self.state = self.STATE_MESSAGE
+
+    def _handle_forget(self, key):
+        """Pick the move to replace; the new move (last row) means don't learn."""
+        count = mascots.MAX_MOVES + 1
+        if key == pygame.K_UP:
+            self.forget_idx = (self.forget_idx - 1) % count
+            audio.play_sfx("move")
+        elif key == pygame.K_DOWN:
+            self.forget_idx = (self.forget_idx + 1) % count
+            audio.play_sfx("move")
+        elif key == pygame.K_x:
+            self._resolve_forget(mascots.MAX_MOVES)
+        elif key in CONFIRM_KEYS:
+            audio.play_sfx("confirm")
+            self._resolve_forget(self.forget_idx)
+
+    def _resolve_forget(self, idx):
+        """Apply the choice and narrate it before the rest of the queue."""
+        mascot, new = self._learning
+        self._learning = None
+        before = len(self.messages)
+        if idx >= mascots.MAX_MOVES:
+            self._say(f"{mascot.name} did not learn {new.name}.")
+        else:
+            old = mascot.moves[idx]
+            mascot.moves[idx] = new
+            self._say(f"{mascot.name} forgot {old.name}...")
+            self._say(f"... and learned {new.name}!")
+        # Narration goes in front of whatever was already waiting
+        added = [self.messages.pop() for _ in range(len(self.messages) - before)]
+        self.messages.extendleft(added)
+        self.state = self.STATE_MESSAGE
+        self._show(self.messages[0])
 
     @staticmethod
     def _grid_move(idx, key, count):
@@ -538,8 +586,11 @@ class BattleScene:
                 continue
             new = Move(move["name"], move["power"], move["type"])
             if len(mascot.moves) >= mascots.MAX_MOVES:
-                old = mascot.moves.pop(0)
-                self._say(f"{mascot.name} forgot {old.name}!")
+                self._say(
+                    f"{mascot.name} wants to learn {new.name}!",
+                    learn=(mascot, new),
+                )
+                continue
             mascot.moves.append(new)
             self._say(f"{mascot.name} learned {new.name}!")
 
@@ -658,8 +709,8 @@ class BattleScene:
         pygame.draw.rect(surface, GB_PALETTE[1], rect)
         pygame.draw.rect(surface, GB_PALETTE[3], rect, width)
 
-    def _draw_info(self, surface, mascot, hp, x, y):
-        """Name, type, HP bar and HP numbers for one side."""
+    def _draw_info(self, surface, mascot, hp, x, y, show_xp=False):
+        """Name, type, HP bar and HP numbers for one side (XP bar if asked)."""
         font = get_font(12)
         small = get_font(10)
         surface.blit(font.render(mascot.name, True, GB_PALETTE[3]), (x, y))
@@ -677,6 +728,12 @@ class BattleScene:
             )
         hp_text = small.render(f"{hp}/{mascot.max_hp}", True, GB_PALETTE[3])
         surface.blit(hp_text, (x + bar_w + 4, bar_y - 3))
+        if show_xp:
+            xp_y = bar_y + bar_h + 2
+            xp_fill = int((bar_w - 2) * mascots.xp_fraction(mascot.level, mascot.xp))
+            pygame.draw.rect(surface, GB_PALETTE[3], (x, xp_y, bar_w, 4), 1)
+            if xp_fill > 0:
+                pygame.draw.rect(surface, GB_PALETTE[2], (x + 1, xp_y + 1, xp_fill, 2))
 
     def _draw_grid(self, surface, labels, selected, x, y, col_w):
         """Two-column menu with a '>' cursor."""
@@ -739,7 +796,7 @@ class BattleScene:
         if view.player_hp > 0 and visible:
             sprite = mascots.get_sprite(view.player.name, SPRITE_SCALE)
             surface.blit(sprite, (16 + dx, 46 + dy))
-        self._draw_info(surface, view.player, view.player_hp, 120, 62)
+        self._draw_info(surface, view.player, view.player_hp, 120, 62, True)
 
         box = (0, BOX_Y, SCREEN_WIDTH, BOX_H)
         if self.state == self.STATE_MESSAGE:
@@ -789,6 +846,27 @@ class BattleScene:
                 surface.blit(qty, (SCREEN_WIDTH - 12 - qty.get_width(), y))
         elif self.state == self.STATE_PARTY_SELECT:
             self._draw_party_select(surface, menu_font, msg_font)
+        elif self.state == self.STATE_FORGET:
+            self._draw_forget(surface)
+
+    def _draw_forget(self, surface):
+        """Full-screen list: the current moves plus the new one (last row)."""
+        mascot, new = self._learning
+        font = get_font(12)
+        self._draw_box(surface, (0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), 2)
+        title = f"{mascot.name}: forget which move?"
+        surface.blit(font.render(title, True, GB_PALETTE[3]), (8, 6))
+        for i, move in enumerate([*mascot.moves, new]):
+            y = 26 + i * 20
+            color = GB_PALETTE[3] if i == self.forget_idx else GB_PALETTE[2]
+            if i == self.forget_idx:
+                surface.blit(font.render(">", True, GB_PALETTE[3]), (8, y))
+            label = f"{move.name} (new)" if move is new else move.name
+            surface.blit(font.render(label, True, color), (20, y))
+            info = font.render(f"{move.type} {move.power}", True, color)
+            surface.blit(info, (SCREEN_WIDTH - 8 - info.get_width(), y))
+        hint = "Z: forget   X: keep old moves"
+        surface.blit(font.render(hint, True, GB_PALETTE[2]), (8, SCREEN_HEIGHT - 18))
 
     def _draw_party_select(self, surface, menu_font, msg_font):
         # Draw party selection menu - Pokemon Red/Blue style full-screen overlay
