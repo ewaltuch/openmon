@@ -7,7 +7,7 @@ A Game Boy–style RPG starring open-source mascots. Inspired by Pokémon Red/Bl
 - Grid-based overworld, turn-based battles, capture, trainers, save/load
 - Mascots so far: Tux, BSD Daemon, Octocat (more planned; see [docs/ROADMAP.md](docs/ROADMAP.md))
 
-Early prototype: placeholder art, one map, no sound yet.
+Early prototype: placeholder art, two maps (town and route 1).
 
 ## Quickstart
 ```sh

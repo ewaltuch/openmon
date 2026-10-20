@@ -1,0 +1,18 @@
+name: Route 1
+tiles: route1.csv
+spawn: [14, 1]
+warps:
+  - {x: 14, y: 0, to: town, tx: 14, ty: 14, facing: up}
+encounters:
+  - {species: Gopher, weight: 4}
+  - {species: Elephpant, weight: 3}
+  - {species: Konqi, weight: 1}
+npcs:
+  - id: route_hiker
+    name: Hiker
+    x: 12
+    y: 19
+    sprite: bsd
+    dialogue:
+      - "The grass on this route is full of Gophers."
+      - "Head back north to return to town."

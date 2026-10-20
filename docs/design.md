@@ -43,6 +43,7 @@ Each species has 3-4 moves; move types may differ from the species type.
 
 ## Wild encounters
 
-`wild_encounters` is one global weighted list, so every grass tile rolls from
-the same table (Octocat most common, Elephpant rarest). Per-area tables need
-map support (zones in the tile map) and are not done yet.
+`wild_encounters` in `mascots.yaml` is the default weighted list (Octocat most
+common, Elephpant rarest). A map YAML can define its own `encounters` list;
+maps without one (the town) use the default. Route 1 favors Gopher and
+Elephpant.

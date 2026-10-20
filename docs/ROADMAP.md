@@ -53,7 +53,7 @@ NPC and the player have a real sprite.
 - The type chart has only 4 entries. Design a full matchup table (e.g. a
   Kernel → Shell → Browser → Editor → Kernel cycle) and document it in
   `docs/design.md`.
-- Expand `wild_encounters` so grass areas differ.
+- Expand `wild_encounters` so grass areas differ (done in 2.3: per-map tables).
 
 **Done when:** 6 species with 3–4 moves each, every type both strong and weak
 against something, covered by a test that loads every species.
@@ -94,11 +94,11 @@ stat growth per species and learnsets in `mascots.yaml`. Saved party states gain
 - Line-of-sight challenge: a trainer spots you and walks up.
 - Rewards (money, see 2.4) on win.
 
-### 2.3 Multiple maps and warps
-- Move `assets/sprites/tiles.csv` to `assets/maps/`, with one YAML per map for
-  NPCs, warps and encounter table.
-- Doors and map-edge warps with a fade transition; the camera already clamps
-  to `tilemap` size.
+### 2.3 Multiple maps and warps (done)
+- Maps live in `assets/maps/` (`<id>.csv` tiles + `<id>.yaml` with spawn,
+  warps, NPCs and an optional encounter table); `town` and `route1` exist.
+- Warps fade out/in on `OverworldScene._on_step_finished`; saves store `map`
+  and defeated trainers as `map:npc_id`.
 - Decide on Tiled `.tmx` (`pytmx`) once there are more than about 5 maps. CSV
   plus YAML is fine until then.
 

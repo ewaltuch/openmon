@@ -2,19 +2,17 @@
 OverworldScene implementation for Open-Mon.
 """
 
-import os
 import random
 
 import pygame
 from PIL import Image, ImageDraw
 
-from src.constants import GB_PALETTE, SCREEN_HEIGHT, SCREEN_WIDTH, SPRITE_DIR
+from src.constants import DEFAULT_MAP, GB_PALETTE, SCREEN_HEIGHT, SCREEN_WIDTH
 from src.overworld import (
     GRASS,
     KEY_DIRECTIONS,
     TILE_SIZE,
     Player,
-    TileMap,
     load_overworld_sprite,
     load_player_images,
 )
@@ -22,9 +20,11 @@ from src.overworld import (
 from . import audio, mascots
 from .fonts import get_font, wrap_text
 from .inventory import STARTING_MONEY
+from .maps import load_map, map_exists
 from .save import SaveManager
 
 INTERACT_KEYS = (pygame.K_SPACE, pygame.K_z, pygame.K_RETURN, pygame.K_KP_ENTER)
+FADE_TIME = 0.25  # seconds for each half (fade out, then fade in) of a warp
 
 
 class OverworldScene:
@@ -45,13 +45,16 @@ class OverworldScene:
         self.manager = manager
         audio.play_music("overworld")
         self.tile_images = self._generate_tiles()
-        self.tilemap = TileMap(os.path.join(SPRITE_DIR, "tiles.csv"))
+        # Defeated trainers, keyed "map_id:npc_id" so they stay correct across maps
+        self.defeated_trainers = {}
+        self.fade = None  # {"phase": "out"|"in", "t": seconds, "warp": Warp}
+        self.map = None
+        self._maps = {}
         # Initialize party as state dictionaries
         self.party = self._initialize_party(["Tux", "BSD Daemon"])
-        sx, sy = self.SPAWN_TILE
         self.player = Player(
-            sx * TILE_SIZE,
-            sy * TILE_SIZE,
+            0,
+            0,
             load_player_images() or [self._generate_player_sprite()],
         )
         self.camera_x = 0
@@ -59,14 +62,10 @@ class OverworldScene:
         self.steps = 0
         self.encounter_steps = random.randint(10, 20)
         self._pending_trainer = None
-        # Load NPCs
-        from src.engine.npc import load_npcs
-
-        self.npcs = load_npcs(
-            os.path.join(os.path.dirname(__file__), "..", "..", "assets", "npcs.yaml")
-        )
         self.active_dialogue = None
         self.active_npc = None
+        self.npcs = []
+        self.enter_map(DEFAULT_MAP)
         # Inventory system
         from src.engine.inventory import InventoryManager
 
@@ -92,6 +91,72 @@ class OverworldScene:
         self.notification_timer = 0
 
         self.show_controls_hint = True
+
+    def enter_map(self, map_id, tx=None, ty=None, facing=None):
+        """Switch to a map immediately and place the player (default: its spawn)."""
+        if self.map is not None:
+            self._sync_defeated()  # remember the map being left
+        if map_id not in self._maps:  # keep NPC objects stable per scene
+            self._maps[map_id] = load_map(map_id)
+        self.map = self._maps[map_id]
+        self.tilemap = self.map.tilemap
+        self.npcs = self.map.npcs
+        for npc in self.npcs:
+            if npc.trainer:
+                npc.defeated = bool(self.defeated_trainers.get(f"{map_id}:{npc.id}"))
+        if tx is None:
+            tx, ty = self.map.spawn
+        self.player.place(tx, ty)
+        if facing:
+            self.player.facing = facing
+        self.active_dialogue = None
+        self.active_npc = None
+        self.steps = 0
+        self._update_camera()
+
+    def start_warp(self, warp):
+        """Begin the fade-out that carries the player through a warp."""
+        self.fade = {"phase": "out", "t": 0.0, "warp": warp}
+
+    def _update_fade(self, dt):
+        fade = self.fade
+        fade["t"] += dt
+        if fade["t"] < FADE_TIME:
+            return
+        if fade["phase"] == "out":
+            w = fade["warp"]
+            self._sync_defeated()
+            self.enter_map(w.to, w.tx, w.ty, w.facing)
+            self.fade = {"phase": "in", "t": 0.0, "warp": w}
+        else:
+            self.fade = None
+
+    def _fade_alpha(self):
+        if not self.fade:
+            return 0
+        ratio = min(1.0, self.fade["t"] / FADE_TIME)
+        return int(255 * (ratio if self.fade["phase"] == "out" else 1 - ratio))
+
+    def _update_camera(self):
+        """Camera follows the player, bounded to the map."""
+        map_w = self.tilemap.width * TILE_SIZE
+        map_h = self.tilemap.height * TILE_SIZE
+        self.camera_x = max(
+            0, min(self.player.x - SCREEN_WIDTH // 2, map_w - SCREEN_WIDTH)
+        )
+        self.camera_y = max(
+            0, min(self.player.y - SCREEN_HEIGHT // 2, map_h - SCREEN_HEIGHT)
+        )
+
+    def _sync_defeated(self):
+        """Record the current map's trainers in defeated_trainers."""
+        for npc in self.npcs:
+            if npc.trainer:
+                key = f"{self.map.id}:{npc.id}"
+                if npc.defeated:
+                    self.defeated_trainers[key] = True
+                else:
+                    self.defeated_trainers.pop(key, None)
 
     def _generate_tiles(self):
         # 0 = floor, 1 = wall, 2 = tall grass
@@ -238,19 +303,16 @@ class OverworldScene:
 
     def _save_game(self):
         """Save game state with notification."""
-        # Save defeated trainer states
-        defeated_npcs = {}
-        for npc in self.npcs:
-            if npc.trainer and npc.defeated:
-                defeated_npcs[npc.id] = True
+        self._sync_defeated()
 
         SaveManager.save(
             {
+                "map": self.map.id,
                 "player": {"x": self.player.x, "y": self.player.y},
                 "party": self.party,
                 "inventory": self.inventory.to_dict(),
                 "money": self.inventory.money,
-                "defeated_npcs": defeated_npcs,
+                "defeated_npcs": dict(self.defeated_trainers),
                 "muted": audio.muted,
             }
         )
@@ -264,9 +326,29 @@ class OverworldScene:
             # Snap to the grid (older saves stored free-movement pixel positions)
             tx = round(data["player"]["x"] / TILE_SIZE)
             ty = round(data["player"]["y"] / TILE_SIZE)
-            if not self.tilemap.is_walkable(tx, ty) or self.npc_at(tx, ty):
-                tx, ty = self.SPAWN_TILE
+            # Defeated trainers: "map:npc" keys; old saves had bare npc ids
+            # from the single (default) map
+            self.defeated_trainers = {}
+            for key in data.get("defeated_npcs", {}):
+                if ":" not in key:
+                    key = f"{DEFAULT_MAP}:{key}"
+                self.defeated_trainers[key] = True
+            # Old saves have no map: they were made on the default one
+            map_id = data.get("map", DEFAULT_MAP)
+            if not map_exists(map_id):
+                map_id = DEFAULT_MAP
+                tx = None
+            self.fade = None
+            self.map = None  # nothing to sync: the save is the truth
+            self.enter_map(map_id)
+            if tx is not None and (
+                not self.tilemap.is_walkable(tx, ty) or self.npc_at(tx, ty)
+            ):
+                tx = None
+            if tx is None:
+                tx, ty = self.map.spawn
             self.player.place(tx, ty)
+            self._update_camera()
 
             # Load party - handle both old format (list of strings) and new format (list of dicts)
             party_data = data.get("party", ["Tux"])
@@ -301,20 +383,7 @@ class OverworldScene:
             # Old saves have no money: start from the default amount
             self.inventory.money = data.get("money", STARTING_MONEY)
 
-            # Reset all trainers to undefeated, then restore from save
-            for npc in self.npcs:
-                if npc.trainer:
-                    npc.defeated = False
-
-            # Restore defeated trainer states from save file
-            defeated_npcs = data.get("defeated_npcs", {})
-            for npc in self.npcs:
-                if npc.id in defeated_npcs:
-                    npc.defeated = True
-
-            # Clear dialogue state (NPCs are freshly loaded, old references are invalid)
-            self.active_dialogue = None
-            self.active_npc = None
+            self._pending_trainer = None
 
             # Ensure game is not paused after loading
             self.is_paused = False
@@ -457,7 +526,8 @@ class OverworldScene:
 
             # Check if this was a battle loss - reset player to spawn
             if getattr(self.manager, "battle_loss_reset", False):
-                self.player.place(*self.SPAWN_TILE)
+                self._sync_defeated()
+                self.enter_map(DEFAULT_MAP, *self.SPAWN_TILE)
                 delattr(self.manager, "battle_loss_reset")
 
             # A trainer only counts as defeated if the battle was won
@@ -474,6 +544,7 @@ class OverworldScene:
             if self._pending_trainer is not None:
                 if won:
                     self._pending_trainer.defeated = True
+                    self._sync_defeated()
                 self._pending_trainer = None
 
         # Check if a mascot was captured in the last battle and add to party
@@ -485,6 +556,11 @@ class OverworldScene:
                 self.party.extend(self._initialize_party([captured_name]))
             # Clear the flag so we don't add it again
             delattr(self.manager, "captured_mascot_name")
+
+        # Input is locked while the warp fade plays
+        if self.fade:
+            self._update_fade(dt)
+            return
 
         # The player stands still while talking
         if self.active_dialogue:
@@ -504,18 +580,14 @@ class OverworldScene:
         if self.player.update(dt):
             self._on_step_finished()
 
-        # Camera follows player, bounded to the map
-        map_w = self.tilemap.width * TILE_SIZE
-        map_h = self.tilemap.height * TILE_SIZE
-        self.camera_x = max(
-            0, min(self.player.x - SCREEN_WIDTH // 2, map_w - SCREEN_WIDTH)
-        )
-        self.camera_y = max(
-            0, min(self.player.y - SCREEN_HEIGHT // 2, map_h - SCREEN_HEIGHT)
-        )
+        self._update_camera()
 
     def _on_step_finished(self):
-        """Roll for an encounter each time the player enters a tall grass tile."""
+        """Take a warp if one is here, else roll an encounter on tall grass."""
+        warp = self.map.warp_at(*self.player.tile)
+        if warp:
+            self.start_warp(warp)
+            return
         if self.tilemap.tile_at(*self.player.tile) != GRASS:
             return
         self.steps += 1
@@ -525,7 +597,10 @@ class OverworldScene:
             # Pass party states to battle
             self.manager.push(
                 BattleScene(
-                    self.manager, party_states=self.party, inventory=self.inventory
+                    self.manager,
+                    party_states=self.party,
+                    inventory=self.inventory,
+                    wild_species=mascots.roll_wild_encounter(table=self.map.encounters),
                 )
             )
             self.steps = 0
@@ -563,6 +638,13 @@ class OverworldScene:
         self.draw_hud(surface)
         self.draw_control_hints(surface)
         self.draw_notification(surface)
+
+        alpha = self._fade_alpha()
+        if alpha:
+            veil = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+            veil.fill(GB_PALETTE[3])
+            veil.set_alpha(alpha)
+            surface.blit(veil, (0, 0))
 
         if self.is_paused:
             self.draw_pause_menu(surface)

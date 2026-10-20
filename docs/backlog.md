@@ -22,6 +22,9 @@ None.
 **2.4 Items, money and a shop**
 - Items in `assets/items.yaml` (with prices), money saved/loaded and shown in HUD and Bag, `ShopScreen` (buy/sell at half, no key items), shop NPC Grace, trainer `reward` via `last_battle_reward`
 
+**2026-10-20: 2.3 Multiple maps and warps**
+- `assets/maps/` with town and route1 (CSV + YAML), fade warps both ways, per-map encounter tables, `map` in saves (old saves load into town), defeated trainers keyed `map:npc_id`
+
 **2026-10-20: Milestone 1 mostly landed**
 - 1.1 SVG→PNG pipeline works (`make assets`), mascot/NPC/player sprites (font and 3 new species' art outstanding)
 - 1.2 Roster of 6, full type cycle, `docs/design.md` (per-area encounter tables wait for 2.3)
