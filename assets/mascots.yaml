@@ -23,6 +23,7 @@ species:
       - {name: Code, power: 8, type: Editor}
       - {name: Shellshock, power: 10, type: Shell}
     # Drawn until a real sprite exists: palette shades and the "feet" box
+    sprite: tux  # assets/sprites/tux.png (from mascots/tux.svg); optional
     placeholder: {body: 2, feet: 3, feet_box: [14, 20, 18, 28]}
 
   BSD Daemon:
@@ -35,6 +36,7 @@ species:
       - {name: Fork Bomb, power: 7, type: Shell}
       - {name: Daemonize, power: 5, type: Kernel}
       - {name: Edit Conf, power: 8, type: Editor}
+    sprite: bsd
     placeholder: {body: 2, feet: 1, feet_box: [12, 24, 20, 28]}
 
   Octocat:
@@ -47,6 +49,7 @@ species:
       - {name: Fork, power: 7, type: Shell}
       - {name: PR, power: 5, type: Editor}
       - {name: Browse, power: 9, type: Browser}
+    sprite: octocat
     placeholder: {body: 1, feet: 3, feet_box: [12, 24, 20, 28]}
 
   Gopher:

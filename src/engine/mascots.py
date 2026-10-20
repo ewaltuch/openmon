@@ -14,7 +14,7 @@ import pygame
 import yaml
 from PIL import Image, ImageDraw
 
-from src.constants import GB_PALETTE
+from src.constants import GB_PALETTE, SPRITE_DIR
 
 MASCOTS_PATH = os.path.join(
     os.path.dirname(__file__), "..", "..", "assets", "mascots.yaml"
@@ -114,7 +114,14 @@ def get_sprite(name, scale=1):
         base = get_sprite(name)
         size = (base.get_width() * scale, base.get_height() * scale)
         return pygame.transform.scale(base, size)
-    p = species(name)["placeholder"]
+    spec = species(name)
+    if spec.get("sprite"):
+        path = os.path.join(SPRITE_DIR, spec["sprite"] + ".png")
+        if os.path.exists(path):
+            loaded = pygame.image.load(path)
+            if loaded.get_size() == (MASCOT_SPRITE_SIZE, MASCOT_SPRITE_SIZE):
+                return loaded
+    p = spec["placeholder"]
     img = Image.new("RGB", (MASCOT_SPRITE_SIZE, MASCOT_SPRITE_SIZE), GB_PALETTE[0])
     draw = ImageDraw.Draw(img)
     draw.ellipse([8, 8, 24, 24], fill=GB_PALETTE[p["body"]])

@@ -1,11 +1,20 @@
 # Makefile for Open-Mon asset pipeline
+# Needs cairosvg: pip install -e .[tools]
+# Audio is handled separately (scripts/beepbox2wav.py).
 
-assets: assets/sprites/ assets/sfx/ assets/music/
-	python scripts/svg2gb.py mascots/tux.svg assets/sprites/tux.png
-	python scripts/svg2gb.py mascots/octocat.svg assets/sprites/octocat.png
-	python scripts/svg2gb.py mascots/bsd.svg assets/sprites/bsd.png
-	python scripts/svg2gb.py mascots/elephpant.svg assets/sprites/elephpant.png
-	python scripts/svg2gb.py mascots/konqi.svg assets/sprites/konqi.png
-	python scripts/svg2gb.py mascots/gopher.svg assets/sprites/gopher.png
-	python scripts/beepbox2wav.py music/overworld.json assets/music/overworld.wav
-	python scripts/beepbox2wav.py music/battle.json assets/music/battle.wav
+PYTHON ?= python
+MASCOTS := $(basename $(notdir $(wildcard mascots/*.svg)))
+OVERWORLD := $(basename $(notdir $(wildcard mascots/overworld/*.svg)))
+PNGS := $(MASCOTS:%=assets/sprites/%.png) $(OVERWORLD:%=assets/sprites/overworld/%.png)
+
+assets: $(PNGS)
+
+assets/sprites/%.png: mascots/%.svg scripts/svg2gb.py
+	@mkdir -p $(dir $@)
+	$(PYTHON) scripts/svg2gb.py $< $@ 32
+
+assets/sprites/overworld/%.png: mascots/overworld/%.svg scripts/svg2gb.py
+	@mkdir -p $(dir $@)
+	$(PYTHON) scripts/svg2gb.py $< $@ 8
+
+.PHONY: assets
