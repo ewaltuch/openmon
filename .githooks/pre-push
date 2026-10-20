@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Mirror of .github/workflows/ci.yml: auto-fix what ruff/black can fix, then
+# run the same checks CI does. Aborts the push if anything was rewritten (so
+# the fixes get committed) or if a check still fails.
+set -u
+cd "$(git rev-parse --show-toplevel)"
+
+if [ -x myenv/bin/python ]; then PY=myenv/bin/python; else PY=python; fi
+
+before=$(git diff | sha1sum)
+
+"$PY" -m ruff check --fix src/ tests/ >/dev/null 2>&1
+"$PY" -m black -q src/ tests/
+
+if [ "$(git diff | sha1sum)" != "$before" ]; then
+    echo "pre-push: ruff/black rewrote files. Review, commit them, and push again:" >&2
+    git diff --stat >&2
+    exit 1
+fi
+
+status=0
+"$PY" -m ruff check src/ tests/ || status=1
+"$PY" -m black --check -q src/ tests/ || status=1
+"$PY" -m pytest -q || status=1
+
+[ $status -ne 0 ] && echo "pre-push: fix the above (CI would fail), or bypass with --no-verify." >&2
+exit $status

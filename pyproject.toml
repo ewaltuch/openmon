@@ -32,3 +32,10 @@ line-length = 88
 
 [tool.ruff]
 line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "S", "BLE", "RUF"]
+ignore = ["S311", "E501"]  # game RNG is not crypto; black owns line length
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]

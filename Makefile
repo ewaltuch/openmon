@@ -18,3 +18,9 @@ assets/sprites/overworld/%.png: mascots/overworld/%.svg scripts/svg2gb.py
 	$(PYTHON) scripts/svg2gb.py $< $@ 8
 
 .PHONY: assets
+
+# One-time setup: use the tracked git hooks (.githooks/pre-push mirrors CI)
+hooks:
+	git config core.hooksPath .githooks
+
+.PHONY: hooks
