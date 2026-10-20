@@ -2,6 +2,14 @@
 Inventory system for Open-Mon: items, packages, consumables.
 """
 
+import os
+from functools import cache
+
+import yaml
+
+ITEMS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "items.yaml")
+STARTING_MONEY = 100
+
 
 class Item:
     """Base class for all items in the game."""
@@ -10,11 +18,12 @@ class Item:
     TYPE_KEY = "key"
     TYPE_PACKAGE = "package"
 
-    def __init__(self, id, name, description, type_, effect=None):
+    def __init__(self, id, name, description, type_, effect=None, price=0):
         self.id = id
         self.name = name
         self.description = description
         self.type = type_
+        self.price = price
         self.effect = effect  # Dictionary describing effect, e.g., {"heal": 20}
 
     def use(self, target):
@@ -42,58 +51,73 @@ class Item:
 
         return False
 
+    @property
+    def sell_price(self):
+        """Half the buy price; key items can't be sold (0)."""
+        return 0 if self.type == self.TYPE_KEY else self.price // 2
+
+
+@cache
+def load_items():
+    """Item definitions from assets/items.yaml, keyed by id."""
+    with open(ITEMS_PATH) as f:
+        data = yaml.safe_load(f)
+    return {
+        item_id: Item(
+            item_id,
+            d["name"],
+            d["description"],
+            d["type"],
+            d.get("effect"),
+            d.get("price", 0),
+        )
+        for item_id, d in data.items()
+    }
+
+
+def get_item(item_id):
+    """Look up an item; unknown ids raise ValueError."""
+    try:
+        return load_items()[item_id]
+    except KeyError:
+        raise ValueError(f"Unknown item: {item_id!r}") from None
+
+
+ITEMS = load_items()
+
 
 class InventoryManager:
     """Manages the player's inventory."""
 
     def __init__(self):
         self.items = {}  # {item_id: quantity}
-        self._item_definitions = self._load_item_definitions()
-
-    def _load_item_definitions(self):
-        """Define all available items in the game."""
-        return {
-            "package": Item(
-                "package",
-                "Package",
-                "Used to capture wild mascots. Higher success rate when opponent HP is low.",
-                Item.TYPE_PACKAGE,
-            ),
-            "health_pack": Item(
-                "health_pack",
-                "Health Pack",
-                "Restores 20 HP to a mascot.",
-                Item.TYPE_CONSUMABLE,
-                {"heal": 20},
-            ),
-            "full_restore": Item(
-                "full_restore",
-                "Full Restore",
-                "Fully restores HP to a mascot.",
-                Item.TYPE_CONSUMABLE,
-                {"full_heal": True},
-            ),
-            "revive": Item(
-                "revive",
-                "Revive",
-                "Revives a fainted mascot with half HP.",
-                Item.TYPE_CONSUMABLE,
-                {"revive": True},
-            ),
-            "repo_key": Item(
-                "repo_key",
-                "Repository Key",
-                "A key to unlock the main repository.",
-                Item.TYPE_KEY,
-            ),
-        }
+        self.money = STARTING_MONEY
+        self._item_definitions = ITEMS
 
     def add_item(self, item_id, quantity=1):
-        """Add items to inventory."""
-        if item_id in self._item_definitions:
-            self.items[item_id] = self.items.get(item_id, 0) + quantity
-            return True
-        return False
+        """Add items to inventory. Unknown items raise ValueError."""
+        get_item(item_id)
+        self.items[item_id] = self.items.get(item_id, 0) + quantity
+        return True
+
+    def buy(self, item_id, quantity=1):
+        """Spend money on items. Returns True if affordable."""
+        cost = get_item(item_id).price * quantity
+        if quantity < 1 or cost > self.money:
+            return False
+        self.money -= cost
+        self.add_item(item_id, quantity)
+        return True
+
+    def sell(self, item_id, quantity=1):
+        """Sell items at half price. Key items and missing stock are refused."""
+        item = get_item(item_id)
+        if item.type == Item.TYPE_KEY or quantity < 1:
+            return False
+        if not self.remove_item(item_id, quantity):
+            return False
+        self.money += item.sell_price * quantity
+        return True
 
     def remove_item(self, item_id, quantity=1):
         """Remove items from inventory. Returns True if successful."""

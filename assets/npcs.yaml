@@ -23,6 +23,7 @@
   y: 10
   sprite: trainer
   trainer: true
+  reward: 60
   party:
     - "BSD Daemon"
     - "Tux"
@@ -32,3 +33,17 @@
   defeated_dialogue:
     - "You're really strong!"
     - "I need to train more..."
+- id: shop_1
+  name: Grace
+  x: 12
+  y: 12
+  sprite: trainer
+  shop: true
+  stock:
+    - package
+    - health_pack
+    - full_restore
+    - revive
+  dialogue:
+    - "Welcome to the Package Registry!"
+    - "Take a look at my wares."

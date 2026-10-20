@@ -1,0 +1,30 @@
+# Item definitions. type: consumable | key | package. price is the buy price;
+# items sell for half. Key items can't be sold.
+package:
+  name: Package
+  description: Used to capture wild mascots. Higher success rate when opponent HP is low.
+  type: package
+  price: 20
+health_pack:
+  name: Health Pack
+  description: Restores 20 HP to a mascot.
+  type: consumable
+  price: 30
+  effect: {heal: 20}
+full_restore:
+  name: Full Restore
+  description: Fully restores HP to a mascot.
+  type: consumable
+  price: 100
+  effect: {full_heal: true}
+revive:
+  name: Revive
+  description: Revives a fainted mascot with half HP.
+  type: consumable
+  price: 80
+  effect: {revive: true}
+repo_key:
+  name: Repository Key
+  description: A key to unlock the main repository.
+  type: key
+  price: 0

@@ -15,6 +15,9 @@ class NPC:
         defeated=False,
         defeated_dialogue=None,
         heals=False,
+        reward=0,
+        shop=False,
+        stock=None,
     ):
         self.id = id
         self.name = name
@@ -30,6 +33,9 @@ class NPC:
         self.party = party or []  # List of mascot names for trainers
         self.defeated = defeated  # Track if trainer has been beaten
         self.heals = heals  # Restores the party after talking
+        self.reward = reward  # Money awarded for beating this trainer
+        self.shop = shop  # Opens a ShopScreen after talking
+        self.stock = stock or []  # Item ids on sale
 
     def talk(self):
         # Use defeated dialogue if trainer has been beaten

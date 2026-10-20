@@ -59,9 +59,11 @@ class BattleScene:
         opponent_party=None,
         is_trainer_battle=False,
         wild_species=None,
+        reward=0,
     ):
         self.manager = manager
         self.is_trainer_battle = is_trainer_battle
+        self.reward = reward  # Money for a win (trainer battles)
         audio.play_music("battle")
 
         # Default party if none provided
@@ -262,6 +264,8 @@ class BattleScene:
             self.manager.last_battle_party_states = self.get_party_states()
             if self._opponent_party_fainted():
                 self.manager.last_battle_won = True
+                if self.reward:
+                    self.manager.last_battle_reward = self.reward
         audio.play_music("overworld")
         self.manager.pop()
 
